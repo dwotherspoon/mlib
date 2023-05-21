@@ -1,31 +1,116 @@
 #include <mlib/mprintf.h>
 #include <mlib/mstr.h>
 
+/* Flag values, used internally when parsing flags field */
+
+/* '#' - Alternate form (0 or 0x prefix, force decimal point or keep trailing zeros)*/
+#define MPRINTF_FLAG_ALTFORM    (1 << 0)
+/* '0' - Zero pad flag */
+#define MPRINTF_FLAG_ZEROPAD    (1 << 1)
+/* '-' - Left justify flag */
+#define MPRINTF_FLAG_LEFTJUST   (1 << 2)
+/* ' ' - Add space if no sign */
+#define MPRINTF_FLAG_SPACESIGN  (1 << 3)
+/* '+' - Force sign */
+#define MPRINTF_FLAG_FORCESIGN  (1 << 4)
+
+
+
+
 /* https://cplusplus.com/reference/cstdio/printf/ */
-static int uprintf_vsnprintf(char *buf, const size_t maxlen, const char *fmt, va_list va)
-{
+int mprintf_vsnprintf(char *buf, const size_t maxlen, const char *fmt, va_list args) {
+    unsigned int temp, flags, width, precision;
     while (*fmt) {
         if (*fmt != '%') {
             /* Output char */
             fmt++;
         } else {
             /* Flags */
+            flags = 0;
+            do {
+                switch (*fmt) {
+                    case '#':
+                        flags |= MPRINTF_FLAG_ALTFORM;
+                        temp = 1;
+                        fmt++;
+                        break;
+                    case '-':
+                        flags |= MPRINTF_FLAG_LEFTJUST;
+                        temp = 1;
+                        fmt++;
+                        break;
+                    case '+':
+                        flags |= MPRINTF_FLAG_FORCESIGN;
+                        temp = 1;
+                        fmt++;
+                        break;
+                    case ' ':
+                        flags |= MPRINTF_FLAG_SPACESIGN;
+                        temp = 1;
+                        fmt++;
+                        break;
+                    case '0':
+                        flags |= MPRINTF_FLAG_ZEROPAD;
+                        temp = 1;
+                        fmt++;
+                        break;
+                    default :
+                        /* Not a format character, exit loop */
+                        temp = 0;
+                        break;
+                }
+            } while (temp);
+            /* Width specifier */
+            width = 0;
+            if (mstr_isdigit(*fmt)) {
+                /* ATOI but quicker this way */
+                while (mstr_isdigit(*fmt)) {
+                    width = width * 10 + (unsigned int)(*fmt - '0');
+                    fmt++;
+                }
+            }
+            else if (*fmt == '*') {
+                /* Width from argument */
+                width = va_arg(args, int);
+                /* TODO: What if width is negative? */
+                fmt++;
+            }
+            
+            /* Precision */
+            precision = 0;
+            if (*fmt == '.') {
+                fmt++;
+                if (mstr_isdigit(*fmt)) {
+                    /* ATOI but quicker this way */
+                    while (mstr_isdigit(*fmt)) {
+                        precision = precision * 10 + (unsigned int)(*fmt - '0');
+                        fmt++;
+                    }
+                }
+                else if (*fmt == '*') {
+                    /* Precision from argument */
+                    precision = va_arg(args, int);
+                    /* TODO: What if precision is negative? Clamp? */
+                    fmt++;
+                }
+            }
+            /* Length */
             switch (*fmt) {
-                case '-':
-                    /* Left justify */
+                case 'h':
                     break;
-                case '+':
-                    /* Force sign for both positive and negative numbers. */
+                case 'l':
                     break;
-                case ' ':
-                    /* Blank space before the value */
+                case 'j':
+                    break;
+                case 'z':
+                    break;
+                case 't':
+                    break;
+                case 'L':
+                    break;
+                default:
                     break;
             }
-            /* Width specifier */
-
-            /* Precision */
-
-            /* Length */
 
             /* Specifier */
             switch (*fmt) {
