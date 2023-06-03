@@ -21,15 +21,24 @@
 #define MPRINTF_FLAG_SPACESIGN  (1 << 3)
 /* '+' - Force sign */
 #define MPRINTF_FLAG_FORCESIGN  (1 << 4)
+/* Precision was specified */
 #define MPRINTF_FLAG_PRECISION  (1 << 5)
+/* Uppercase form */
 #define MPRINTF_FLAG_UPPERCASE  (1 << 6)
+/* Signed argument */
 #define MPRINTF_FLAG_SIGNED     (1 << 7)
+/* Character length specified */
 #define MPRINTF_FLAG_CHAR       (1 << 8)
+/* Short length specified */
 #define MPRINTF_FLAG_SHORT      (1 << 9)
+/* Long length specified */
 #define MPRINTF_FLAG_LONG       (1 << 10)
+/* Long long length specified */
 #define MPRINTF_FLAG_LONGLONG   (1 << 11)
+/* Long double length specified */
 #define MPRINTF_FLAG_LONGDOUBLE (1 << 12)
 
+/* Length of argument buffer */
 #define MPRINTF_NTOA_BUFFER_LEN (32)
 
 #define MPRINTF_CONFIG_FP
@@ -90,7 +99,7 @@ size_t mprintf_out_rev(struct mprintf_output *out, const char *buf, size_t len, 
 
 size_t mprintf_ntoa_format(struct mprintf_output *out, char *buf, size_t len, bool neg,
                             unsigned int base, unsigned int prec, unsigned int width, unsigned int flags) {
-    /* Pad with leadinbg zeros for left justification */
+    /* Pad with leading zeros for right justification */
     if (!(flags & MPRINTF_FLAG_LEFTJUST)) {
         if (width && (flags & MPRINTF_FLAG_ZEROPAD) && (neg || (flags & (MPRINTF_FLAG_FORCESIGN | MPRINTF_FLAG_SPACESIGN)))) {
             width--;
@@ -227,7 +236,7 @@ int mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list arg
                 /* TODO: What if width is negative? */
                 fmt++;
             }
-            
+
             /* Precision */
             precision = 0;
             if (*fmt == '.') {
@@ -357,17 +366,33 @@ int mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list arg
                         flags |= MPRINTF_FLAG_UPPERCASE;
                     }
 
-                    fmt++;
-
+                    /* Force sign and space sign not for unsigned numbers */
                     flags &= ~(MPRINTF_FLAG_FORCESIGN | MPRINTF_FLAG_SPACESIGN);
 
+                    /* Ignore zero-padding when precision is specified */
                     if (flags & MPRINTF_FLAG_PRECISION) {
-                        /* Ignore zero-padding when precision is specified */
                         flags &= ~MPRINTF_FLAG_ZEROPAD;
                     }
 
-
-
+                    if (flags & MPRINTF_FLAG_LONGLONG) {
+                        /* mprintf_ntoa_long_long(out, va_arg(va, unsigned long long), false, base, precision, width, flags); */
+                    }
+                    else if (flags & MPRINTF_FLAG_LONG) {
+                        mprintf_ntoa_long(out, va_arg(args, unsigned long), false, base, precision, width, flags);
+                    }
+                    else {
+                        if (flags & MPRINTF_FLAG_CHAR) {
+                            const unsigned char value = (unsigned char)va_arg(args, unsigned int);
+                            mprintf_ntoa_long(out, value, false, base, precision, width, flags);
+                        }
+                        else if (flags & MPRINTF_FLAG_SHORT) {
+                            const unsigned short int value = (unsigned short int)va_arg(args, unsigned int);
+                            mprintf_ntoa_long(out, value, false, base, precision, width, flags);
+                        } else {
+                            mprintf_ntoa_long(out, va_arg(args, unsigned int), false, base, precision, width, flags);
+                        }
+                    }
+                    fmt++;
                     break;
                 case 'f':
                     /* Decimal floating point (lowercase) */
@@ -403,7 +428,7 @@ int mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list arg
                     /* Right padding */
                     if (!(flags & MPRINTF_FLAG_LEFTJUST)) {
                         for (; temp < width; temp++) {
-                            mprintf_putchar(out, ' ');
+                            mprintf_putchar(out, (flags & MPRINTF_FLAG_ZEROPAD) ? '0' : ' ');
                         }
                     }
 
@@ -412,6 +437,7 @@ int mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list arg
                     /* Left Padding */
                     if (flags & MPRINTF_FLAG_LEFTJUST) {
                         for (; temp < width; temp++) {
+                            /* Seems like left padding doesn't work with zeropad */
                             mprintf_putchar(out, ' ');
                         }
                     }

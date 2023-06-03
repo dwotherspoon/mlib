@@ -4,9 +4,9 @@ import random
 
 INT_SIZE = 32
 INT_U_MIN = 0
-INT_U_MAX = 2**(INT_SIZE) - 1
-INT_S_MIN = 2 ** (INT_SIZE - 1) * -1
-INT_S_MAX = 2 ** (INT_SIZE - 1) - 1
+INT_U_MAX = (2 ** (INT_SIZE)) - 1
+INT_S_MIN = (2 ** (INT_SIZE - 1)) * -1
+INT_S_MAX = (2 ** (INT_SIZE - 1)) - 1
 
 FMT_FLAGS_CHOICES = ['#', '0', '-', ' ', '+']
 FMT_FLAGS_PROB = 0.5
@@ -54,7 +54,7 @@ def gen_fmt_arg():
     if biased_choice(FMT_LENGTH_PROB):
         length = random.choice(FMT_LENGTH_CHOICES)
         result_fmt += length
-    
+
     specifier = random.choice(FMT_SPECIFIER_CHOICES)
     result_fmt += specifier
 
