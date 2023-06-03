@@ -1,6 +1,8 @@
 #ifndef _MSTR_H
 #define _MSTR_H
 
+#include <stddef.h>
+
 /* Common string functions required by mprintf and mfat */
 
 #define mstr_isupper(C)      ((C) >= 'A' && (C) <= 'Z')
@@ -9,6 +11,7 @@
 #define mstr_issep(C)        ((C) == '/' || (C) == '\\')
 #define mstr_iswhitespace(C) ((C) == ' ' || (C) == '\t' || (C) == '\r' || (C) == '\n' || (C) == '\v' || (C) == '\f')
 
+char *mstr_strrev(char *str);
 int mstr_atoi(const char *str);
 
 #endif

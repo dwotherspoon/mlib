@@ -5,6 +5,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-int mprintf_vsnprintf(char *buf, const size_t maxlen, const char *fmt, va_list va);
+int mprintf_printf(const char *fmt, ...);
 
 #endif

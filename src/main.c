@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include <mlib/mfat.h>
+#include <mlib/mprintf.h>
 
 struct fp_info {
     char *path;
@@ -29,5 +30,16 @@ enum mfat_device_result fp_ioctl(void *user, uint8_t *buf, uint64_t lba, uint32_
 
 
 int main(int argc, char *argv[]) {
+    mprintf_printf("Hello, world!\n");
+    printf("Hello, world!\n");
+
+    mprintf_printf("Hello, world! %i\n", 200);
+    printf("Hello, world! %i\n", 200);
+
+    mprintf_printf("Hello, world! %hi\n", 0x1ffaff);
+    printf("Hello, world! %hi\n", 0x1ffaff);
+
+    mprintf_printf("Hello, world! %hhi\n", 2000);
+    printf("Hello, world! %hhi\n", 2000);
     return 0;
 }
