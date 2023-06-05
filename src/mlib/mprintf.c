@@ -2,6 +2,9 @@
 #include <mlib/mstr.h>
 
 #include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <float.h>
 
 #include <stdio.h>
 
@@ -40,6 +43,8 @@
 
 /* Length of argument buffer */
 #define MPRINTF_NTOA_BUFFER_LEN (32)
+#define MPRINTF_FTOA_BUFFER_LEN (32)
+#define MPRINTF_FTOA_MAX_PRECISION (10)
 
 #define MPRINTF_CONFIG_FP
 
@@ -175,9 +180,53 @@ size_t mprintf_ntoa_long(struct mprintf_output *out, unsigned long value, bool n
   return mprintf_ntoa_format(out, buf, len, neg, (unsigned int)base, prec, width, flags);
 }
 
+size_t mprintf_ftoa(struct mprintf_output *out, double value, unsigned int prec, unsigned int width, unsigned int flags) {
+    char buf[MPRINTF_FTOA_BUFFER_LEN];
+    bool neg = false;
+
+    /* Special cases */
+    if (value != value) {
+        return mprintf_out_rev(out, "nan", 3, width, flags);
+    }
+    if (value < -DBL_MAX) {
+        return mprintf_out_rev(out, "fni-", 4, width, flags);
+    }
+    if (value > DBL_MAX) {
+        return mprintf_out_rev(out, (flags & MPRINTF_FLAG_FORCESIGN) ? "fni+" : "fni", (flags & MPRINTF_FLAG_FORCESIGN) ? 4U : 3U, width, flags);
+    }
+    if (value < 0) {
+        neg = true;
+        value = 0 - value;
+    }
+
+    if (prec < 0)
+    {
+        if (f < 1.0) {
+            prec = 6;
+        }
+        else if (f < 10.0) {
+            prec = 5;
+        }
+        else if (f < 100.0) {
+            prec = 4;
+        }
+        else if (f < 1000.0) {
+            prec = 3;
+        }
+        else if (f < 10000.0) {
+            prec = 2;
+        }
+        else if (f < 100000.0) {
+            prec = 1;
+        } else {
+            prec = 0;
+        }
+    }
+}
+
 /* https://cplusplus.com/reference/cstdio/printf/
 */
-int mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list args) {
+void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list args) {
     unsigned int temp, flags, width, precision, base;
     while (*fmt) {
         if (*fmt != '%') {
@@ -469,10 +518,9 @@ int mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list arg
     }
 }
 
-int mprintf_printf(const char *fmt, ...) {
+void mprintf_printf(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    const int ret = mprintf_format_loop(&mprintf_console_output, fmt, args);
+    mprintf_format_loop(&mprintf_console_output, fmt, args);
     va_end(args);
-    return ret;
 }
