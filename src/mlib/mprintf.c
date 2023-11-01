@@ -8,8 +8,6 @@
 
 #include <stdio.h>
 
-#define MPRINTF_PUTCHAR putchar
-
 #define MPRINTF_ABS(VAL) (((VAL) < 0) ? -(VAL) : (VAL))
 
 /* Flag values, used internally when parsing flags field */
@@ -41,10 +39,12 @@
 /* Long double length specified */
 #define MPRINTF_FLAG_LONGDOUBLE (1 << 12)
 
-/* Length of argument buffer */
-#define MPRINTF_NTOA_BUFFER_LEN (32)
-#define MPRINTF_FTOA_BUFFER_LEN (32)
-#define MPRINTF_FTOA_MAX_PRECISION (10)
+/* Configuration */
+#define MPRINTF_NTOA_BUFFER_LEN        (32)
+#define MPRINTF_FTOA_BUFFER_LEN        (32)
+#define MPRINTF_FTOA_MAX_PRECISION     (10)
+#define MPRINTF_FTOA_DEFAULT_PRECISION (6)
+#define MPRINTF_PUTCHAR putchar
 
 #define MPRINTF_CONFIG_FP
 
@@ -194,29 +194,29 @@ size_t mprintf_ftoa(struct mprintf_output *out, double value, unsigned int prec,
     if (value > DBL_MAX) {
         return mprintf_out_rev(out, (flags & MPRINTF_FLAG_FORCESIGN) ? "fni+" : "fni", (flags & MPRINTF_FLAG_FORCESIGN) ? 4U : 3U, width, flags);
     }
-    if (value < 0) {
-        neg = true;
-        value = 0 - value;
+
+    if (!(flags & MPRINTF_FLAG_PRECISION)) {
+        prec = MPRINTF_FTOA_DEFAULT_PRECISION;
     }
 
     if (prec < 0)
     {
-        if (f < 1.0) {
+        if (value < 1.0) {
             prec = 6;
         }
-        else if (f < 10.0) {
+        else if (value < 10.0) {
             prec = 5;
         }
-        else if (f < 100.0) {
+        else if (value < 100.0) {
             prec = 4;
         }
-        else if (f < 1000.0) {
+        else if (value < 1000.0) {
             prec = 3;
         }
-        else if (f < 10000.0) {
+        else if (value < 10000.0) {
             prec = 2;
         }
-        else if (f < 100000.0) {
+        else if (value < 100000.0) {
             prec = 1;
         } else {
             prec = 0;
@@ -227,7 +227,7 @@ size_t mprintf_ftoa(struct mprintf_output *out, double value, unsigned int prec,
 /* https://cplusplus.com/reference/cstdio/printf/
 */
 void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list args) {
-    unsigned int temp, flags, width, precision, base;
+    unsigned int temp, flags, width, prec, base;
     while (*fmt) {
         if (*fmt != '%') {
             /* Output char */
@@ -264,7 +264,7 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                         temp = 1;
                         fmt++;
                         break;
-                    default :
+                    default:
                         /* Not a format character, exit loop */
                         temp = 0;
                         break;
@@ -287,21 +287,21 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
             }
 
             /* Precision */
-            precision = 0;
+            prec = 0;
             if (*fmt == '.') {
                 flags |= MPRINTF_FLAG_PRECISION;
                 fmt++;
                 if (mstr_isdigit(*fmt)) {
                     /* ATOI but quicker this way */
                     while (mstr_isdigit(*fmt)) {
-                        precision = precision * 10 + (unsigned int)(*fmt - '0');
+                        prec = prec * 10 + (unsigned int)(*fmt - '0');
                         fmt++;
                     }
                 }
                 else if (*fmt == '*') {
                     /* Precision from argument */
-                    precision = va_arg(args, int);
-                    /* TODO: What if precision is negative? Clamp? */
+                    prec = va_arg(args, int);
+                    /* TODO: What if prec is negative? Clamp? */
                     fmt++;
                 }
             }
@@ -354,6 +354,8 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     /* Fallthrough */
                 case 'i':
                     /* Signed decimal integer */
+
+                    /* Signed integer cases. */
                     flags |= MPRINTF_FLAG_SIGNED;
                     /* Ignore zero-padding when precision is specified */
                     if (flags & MPRINTF_FLAG_PRECISION) {
@@ -365,19 +367,19 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     }
                     else if (flags & MPRINTF_FLAG_LONG) {
                         const long value = va_arg(args, long);
-                        mprintf_ntoa_long(out, MPRINTF_ABS(value), value < 0, 10, precision, width, flags);
+                        mprintf_ntoa_long(out, MPRINTF_ABS(value), value < 0, 10, prec, width, flags);
                     } else {
                         if (flags & MPRINTF_FLAG_CHAR) {
                             const char value = (char)va_arg(args, int);
-                            mprintf_ntoa_long(out, MPRINTF_ABS(value), value < 0, 10, precision, width, flags);
+                            mprintf_ntoa_long(out, MPRINTF_ABS(value), value < 0, 10, prec, width, flags);
                         }
                         else if (flags & MPRINTF_FLAG_SHORT) {
                             const short int value = (short int)va_arg(args, int);
-                            mprintf_ntoa_long(out, MPRINTF_ABS(value), value < 0, 10, precision,  width, flags);
+                            mprintf_ntoa_long(out, MPRINTF_ABS(value), value < 0, 10, prec,  width, flags);
                         }
                         else {
                             const int value = va_arg(args, int);
-                            mprintf_ntoa_long(out, MPRINTF_ABS(value), value < 0, 10, precision, width, flags);
+                            mprintf_ntoa_long(out, MPRINTF_ABS(value), value < 0, 10, prec, width, flags);
                         }
                     }
                     fmt++;
@@ -396,6 +398,8 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     /* Fallthrough */
                 case 'b':
                     /* Binary integer (not standard printf) */
+
+                    /* Unsigned integers, choose base and fix flags. */
                     if (*fmt == 'x' || *fmt == 'X') {
                         base = 16;
                     }
@@ -415,7 +419,7 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                         flags |= MPRINTF_FLAG_UPPERCASE;
                     }
 
-                    /* Force sign and space sign not for unsigned numbers */
+                    /* Force sign and space sign not allowed for unsigned numbers */
                     flags &= ~(MPRINTF_FLAG_FORCESIGN | MPRINTF_FLAG_SPACESIGN);
 
                     /* Ignore zero-padding when precision is specified */
@@ -424,21 +428,21 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     }
 
                     if (flags & MPRINTF_FLAG_LONGLONG) {
-                        /* mprintf_ntoa_long_long(out, va_arg(va, unsigned long long), false, base, precision, width, flags); */
+                        /* mprintf_ntoa_long_long(out, va_arg(va, unsigned long long), false, base, prec, width, flags); */
                     }
                     else if (flags & MPRINTF_FLAG_LONG) {
-                        mprintf_ntoa_long(out, va_arg(args, unsigned long), false, base, precision, width, flags);
+                        mprintf_ntoa_long(out, va_arg(args, unsigned long), false, base, prec, width, flags);
                     }
                     else {
                         if (flags & MPRINTF_FLAG_CHAR) {
                             const unsigned char value = (unsigned char)va_arg(args, unsigned int);
-                            mprintf_ntoa_long(out, value, false, base, precision, width, flags);
+                            mprintf_ntoa_long(out, value, false, base, prec, width, flags);
                         }
                         else if (flags & MPRINTF_FLAG_SHORT) {
                             const unsigned short int value = (unsigned short int)va_arg(args, unsigned int);
-                            mprintf_ntoa_long(out, value, false, base, precision, width, flags);
+                            mprintf_ntoa_long(out, value, false, base, prec, width, flags);
                         } else {
-                            mprintf_ntoa_long(out, va_arg(args, unsigned int), false, base, precision, width, flags);
+                            mprintf_ntoa_long(out, va_arg(args, unsigned int), false, base, prec, width, flags);
                         }
                     }
                     fmt++;
@@ -510,6 +514,7 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     fmt++;
                     break;
                 default:
+                    /* Unmatched, output character */
                     mprintf_putchar(out, *fmt);
                     fmt++;
                     break;
