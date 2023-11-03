@@ -51,13 +51,6 @@
 char const *mprintf_lowercase_digit_lut = "0123456789abcdef";
 char const *mprintf_uppercase_digit_lut = "0123456789ABCDEF";
 
-struct mprintf_output {
-    void (*func)(char c);
-    char *buf;
-    size_t pos;
-    size_t max;
-};
-
 struct mprintf_output mprintf_console_output = {MPRINTF_PUTCHAR, NULL, 0, SIZE_MAX};
 
 /* Put a char to the output device or string */
@@ -73,10 +66,6 @@ void mprintf_putchar(struct mprintf_output *out, char c) {
     } else {
         out->buf[out->pos] = c;
     }
-}
-
-int mprintf_puts(struct mprintf_output *out, char *s) {
-    return 0;
 }
 
 size_t mprintf_out_rev(struct mprintf_output *out, const char *buf, size_t len, unsigned int width, unsigned int flags) {
@@ -168,7 +157,7 @@ size_t mprintf_ntoa_long(struct mprintf_output *out, unsigned long value, bool n
         flags &= ~MPRINTF_FLAG_ALTFORM;
     }
 
-    // write if precision != 0 and value is != 0
+    /* Write if precision != 0 and value is != 0 */
     if (!(flags & MPRINTF_FLAG_PRECISION) || value) {
         for (; value && (len < MPRINTF_NTOA_BUFFER_LEN); len++) {
             const char digit = (char)(value % base);
@@ -180,11 +169,17 @@ size_t mprintf_ntoa_long(struct mprintf_output *out, unsigned long value, bool n
   return mprintf_ntoa_format(out, buf, len, neg, (unsigned int)base, prec, width, flags);
 }
 
+static const double mprintf_pow10_lut[] = {1e00, 1e01, 1e02, 1e03, 1e04, 1e05, 1e06, 1e07, 1e08,
+                                           1e09, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17};
+
 size_t mprintf_ftoa(struct mprintf_output *out, double value, unsigned int prec, unsigned int width, unsigned int flags) {
     char buf[MPRINTF_FTOA_BUFFER_LEN];
     bool neg = false;
+    uint64_t int_part, frac_part;
+    double remainder, diff;
 
     /* Special cases */
+
     if (value != value) {
         return mprintf_out_rev(out, "nan", 3, width, flags);
     }
@@ -195,12 +190,17 @@ size_t mprintf_ftoa(struct mprintf_output *out, double value, unsigned int prec,
         return mprintf_out_rev(out, (flags & MPRINTF_FLAG_FORCESIGN) ? "fni+" : "fni", (flags & MPRINTF_FLAG_FORCESIGN) ? 4U : 3U, width, flags);
     }
 
+    /* Negative test */
+    if (value < 0) {
+        neg = true;
+        value = 0 - value;
+    }
+
+    /* Choose precision */
     if (!(flags & MPRINTF_FLAG_PRECISION)) {
         prec = MPRINTF_FTOA_DEFAULT_PRECISION;
     }
-
-    if (prec < 0)
-    {
+    else if (prec < 0) {
         if (value < 1.0) {
             prec = 6;
         }
@@ -222,12 +222,46 @@ size_t mprintf_ftoa(struct mprintf_output *out, double value, unsigned int prec,
             prec = 0;
         }
     }
+
+    /* Extract integral part and fractional part */
+    int_part = (uint64_t)value;
+    remainder = (value - (double)int_part) * mprintf_pow10_lut[prec];
+    frac_part = (uint64_t)remainder;
+    diff = remainder - frac_part;
+
+    /* Rounding */
+    if (diff > 0.5) {
+        frac_part++;
+        /* Rollover */
+        if (frac_part >= mprintf_pow10_lut[prec]) {
+            frac_part = 0;
+            int_part++;
+        }
+    } else if (diff == 0.5 && (frac_part == 0 || frac_part & 1)) {
+        /* If half way, round up if odd or if last digit is zero */
+        frac_part++;
+    }
+
+    if (prec == 0) {
+        /* Zero precision round up of int part case */
+        diff = value - (double)int_part;
+        if ((!(diff < 0.5) || (diff > 0.5)) && (int_part & 1)) {
+            /* If 0.5 and odd, round up. 1.5 -> 2, 2.5 -> 2 */
+            int_part++;
+        }
+    } else {
+    }
+
+    printf("int_part = %lu, frac_part = %lu\n", int_part, frac_part);
+
+    return 0;
 }
 
 /* https://cplusplus.com/reference/cstdio/printf/
 */
 void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list args) {
     unsigned int temp, flags, width, prec, base;
+
     while (*fmt) {
         if (*fmt != '%') {
             /* Output char */
@@ -447,13 +481,17 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     }
                     fmt++;
                     break;
-                case 'f':
-                    /* Decimal floating point (lowercase) */
-                    break;
+#ifdef MPRINTF_FLOAT_SUPPORT
                 case 'F':
-                    /* Decimal floating point (uppercase) */
+                    /* Decimal floating point (lowercase) */
                     flags |= MPRINTF_FLAG_UPPERCASE;
+                    /* Fallthrough */
+                case 'f':
+                    /* Decimal floating point (uppercase) */
+                    mprintf_ftoa(out, va_arg(args, double), prec, width, flags);
+                    fmt++;
                     break;
+#endif
                 case 'e':
                     /* Scientific notation (lowercase) */
                     break;
@@ -481,10 +519,13 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     /* Right padding */
                     if (!(flags & MPRINTF_FLAG_LEFTJUST)) {
                         for (; temp < width; temp++) {
+#ifdef MPRINTF_ALLOW_CHARACTER_ZEROPAD
                             mprintf_putchar(out, (flags & MPRINTF_FLAG_ZEROPAD) ? '0' : ' ');
+#else
+                            mprintf_putchar(out, ' ');
+#endif
                         }
                     }
-
                     mprintf_putchar(out, (char)va_arg(args, int));
 
                     /* Left Padding */

@@ -56,5 +56,17 @@ int main(int argc, char *argv[]) {
     mprintf_printf("Hello, world! %#lo : %% : %010c END\n", test_64_bin, 'a');
     printf("Hello, world! %#lo : %% : %010c END\n", test_64_bin, 'a');
 
+
+    mprintf_ftoa(NULL, 1.5, 0, 0, 0);
+    mprintf_ftoa(NULL, 2.5, 0, 0, 0);
+
+    mprintf_ftoa(NULL, 1.15, 1, 0, 0);
+    mprintf_ftoa(NULL, 2.25, 1, 0, 0);
+
+    mprintf_printf("%.0f\n", 1.5);
+    mprintf_printf("%.0f\n", 2.5);
+    printf("%.0f\n", 1.5);
+    printf("%.0f\n", 2.5);
+
     return 0;
 }
