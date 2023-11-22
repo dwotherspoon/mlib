@@ -1,5 +1,4 @@
 # MLib
-
 A suite of basic mini libraries for handling strings, printf and FAT filesystems, targetting microcontrollers.
 
 ## MPrintf
@@ -10,3 +9,5 @@ Some helpful string handling functions.
 
 ## MFat
 A basic FAT filesystem library.
+
+## MMath

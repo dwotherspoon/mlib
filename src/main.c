@@ -2,6 +2,7 @@
 
 #include <mlib/mfat.h>
 #include <mlib/mprintf.h>
+#include <mlib/mstr.h>
 
 struct fp_info {
     char *path;
@@ -30,12 +31,20 @@ enum mfat_device_result fp_ioctl(void *user, uint8_t *buf, uint64_t lba, uint32_
 
 
 int main(int argc, char *argv[]) {
+    char temp[128];
     printf("Sizeof char is %zu\n", sizeof(char));
     printf("Sizeof short is %zu\n", sizeof(short int));
     printf("Sizeof int is %zu\n", sizeof(int));
     printf("Sizeof long is %zu\n", sizeof(long));
     printf("Sizeof long long is %zu\n", sizeof(long long));
 
+    printf("TEST 500: %sTEST\n", mstr_itoa(500, temp, 10));
+    printf("TEST 0: %sTEST\n", mstr_itoa(0, temp, 10));
+    printf("TEST 1000500: %sTEST\n", mstr_itoa(1000500, temp, 10));
+    printf("TEST -500: %sTEST\n", mstr_itoa(-500, temp, 10));
+    printf("TEST -500 hex: %sTEST\n", mstr_itoa(-500, temp, 16));
+    printf("TEST -1000500 hex: %sTEST\n", mstr_itoa(-1000500, temp, 16));
+/*
     mprintf_printf("Hello, world!\n");
     printf("Hello, world!\n");
 
@@ -67,6 +76,6 @@ int main(int argc, char *argv[]) {
     mprintf_printf("%.0f\n", 2.5);
     printf("%.0f\n", 1.5);
     printf("%.0f\n", 2.5);
-
+    */
     return 0;
 }

@@ -13,5 +13,6 @@
 
 char *mstr_strrev(char *str);
 int mstr_atoi(const char *str);
+char *mstr_itoa(int value, char *str, int base);
 
 #endif

@@ -1,12 +1,10 @@
 #include <mlib/mprintf.h>
 #include <mlib/mstr.h>
+#include <mlib/mshared.h>
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
 #include <float.h>
-
-#include <stdio.h>
 
 #define MPRINTF_ABS(VAL) (((VAL) < 0) ? -(VAL) : (VAL))
 
@@ -44,13 +42,12 @@
 #define MPRINTF_FTOA_BUFFER_LEN        (32)
 #define MPRINTF_FTOA_MAX_PRECISION     (10)
 #define MPRINTF_FTOA_DEFAULT_PRECISION (6)
-#define MPRINTF_PUTCHAR putchar
+
+#define MPRINTF_PUTCHAR NULL
 
 #define MPRINTF_CONFIG_FP
 
-char const *mprintf_lowercase_digit_lut = "0123456789abcdef";
-char const *mprintf_uppercase_digit_lut = "0123456789ABCDEF";
-
+/* Default console output device */
 struct mprintf_output mprintf_console_output = {MPRINTF_PUTCHAR, NULL, 0, SIZE_MAX};
 
 /* Put a char to the output device or string */
@@ -161,7 +158,7 @@ size_t mprintf_ntoa_long(struct mprintf_output *out, unsigned long value, bool n
     if (!(flags & MPRINTF_FLAG_PRECISION) || value) {
         for (; value && (len < MPRINTF_NTOA_BUFFER_LEN); len++) {
             const char digit = (char)(value % base);
-            buf[len] = (flags & MPRINTF_FLAG_UPPERCASE) ? mprintf_lowercase_digit_lut[digit] : mprintf_uppercase_digit_lut[digit];
+            buf[len] = (flags & MPRINTF_FLAG_UPPERCASE) ? mshared_lowercase_digit_lut[digit] : mshared_uppercase_digit_lut[digit];
             value /= base;
         }
     }
@@ -252,7 +249,7 @@ size_t mprintf_ftoa(struct mprintf_output *out, double value, unsigned int prec,
     } else {
     }
 
-    printf("int_part = %lu, frac_part = %lu\n", int_part, frac_part);
+    // printf("int_part = %lu, frac_part = %lu\n", int_part, frac_part);
 
     return 0;
 }
