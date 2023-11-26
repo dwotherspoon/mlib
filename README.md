@@ -11,3 +11,4 @@ Some helpful string handling functions.
 A basic FAT filesystem library.
 
 ## MMath
+Basic math functions (mostly table-based trigonometric functions).
