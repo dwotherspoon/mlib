@@ -42,12 +42,12 @@
 #define MPRINTF_FTOA_MAX_PRECISION     (10)
 #define MPRINTF_FTOA_DEFAULT_PRECISION (6)
 
-#include <stdio.h>
-#define MPRINTF_PUTCHAR putchar
-
-
-/* Default console output device */
-struct mprintf_output mprintf_console_output = {MPRINTF_PUTCHAR, NULL, 0, SIZE_MAX};
+struct mprintf_output {
+    void (*func)(char c);
+    char *buf;
+    size_t pos;
+    size_t max;
+};
 
 /* Put a char to the output device or string */
 void mprintf_putchar(struct mprintf_output *out, char c) {
@@ -62,6 +62,23 @@ void mprintf_putchar(struct mprintf_output *out, char c) {
     } else {
         out->buf[out->pos] = c;
     }
+}
+
+void mprintf_terminate(struct mprintf_output *out) {
+    /* Termination */
+    if (out->func != NULL) {
+        /* Functions don't get termination */
+        return;
+    }
+    if (out->max == 0) {
+        /* If max length was 0, no termnation. */
+        return;
+    }
+    if (out->buf == NULL) {
+        /* NULL buffer can't be terminated */
+        return;
+    }
+    out->buf[(out->pos < out->max) ? out->pos : out->max - 1] = '\0';
 }
 
 size_t mprintf_out_rev(struct mprintf_output *out, const char *buf, size_t len, unsigned int width, unsigned int flags) {
@@ -95,6 +112,8 @@ size_t mprintf_out_rev(struct mprintf_output *out, const char *buf, size_t len, 
             mprintf_putchar(out, ' ');
         }
     }
+
+    return out->pos - start_pos;
 }
 
 size_t mprintf_ntoa_format(struct mprintf_output *out, char *buf, size_t len, bool neg,
@@ -172,7 +191,7 @@ size_t mprintf_ntoa_long(struct mprintf_output *out, unsigned long value, bool n
         for (; value && (len < MPRINTF_NTOA_BUFFER_LEN); len++) {
             const char digit = (char)(value % base);
             buf[len] = (flags & MPRINTF_FLAG_UPPERCASE) ? mprintf_lowercase_digit_lut[digit] : mprintf_uppercase_digit_lut[digit];
-            value /= base; 
+            value /= base;
         }
     }
     else if (!(flags & MPRINTF_FLAG_PRECISION) ) {
@@ -183,6 +202,36 @@ size_t mprintf_ntoa_long(struct mprintf_output *out, unsigned long value, bool n
 
   return mprintf_ntoa_format(out, buf, len, neg, (unsigned int)base, prec, width, flags);
 }
+
+#ifdef MPRINTF_LONGLONG_SUPPORT
+size_t mprintf_ntoa_long_long(struct mprintf_output *out, unsigned long long value, bool neg,
+                            unsigned long base, unsigned int prec, unsigned int width, unsigned int flags)
+{
+    char buf[MPRINTF_NTOA_BUFFER_LEN];
+    size_t len = 0;
+
+    /* No alt form for zero values */
+    if (!value) {
+        flags &= ~MPRINTF_FLAG_ALTFORM;
+    }
+
+    /* Write if precision wasn't set or value wasn't 0 */
+    if (value) {
+        for (; value && (len < MPRINTF_NTOA_BUFFER_LEN); len++) {
+            const char digit = (char)(value % base);
+            buf[len] = (flags & MPRINTF_FLAG_UPPERCASE) ? mprintf_lowercase_digit_lut[digit] : mprintf_uppercase_digit_lut[digit];
+            value /= base;
+        }
+    }
+    else if (!(flags & MPRINTF_FLAG_PRECISION) ) {
+        if (len < MPRINTF_NTOA_BUFFER_LEN) {
+            buf[len++] = '0';
+        }
+    }
+
+  return mprintf_ntoa_format(out, buf, len, neg, (unsigned int)base, prec, width, flags);
+}
+#endif
 
 #ifdef MPRINTF_FLOAT_SUPPORT
 static const double mprintf_pow10_lut[] = {1e00, 1e01, 1e02, 1e03, 1e04, 1e05, 1e06, 1e07, 1e08,
@@ -324,8 +373,10 @@ size_t mprintf_ftoa(struct mprintf_output *out, double value, unsigned int prec,
 
 /* https://cplusplus.com/reference/cstdio/printf/
 */
-void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list args) {
+int mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list args) {
     unsigned int temp, flags, width, prec, base;
+    char *str;
+    size_t len;
 
     while (*fmt) {
         if (*fmt != '%') {
@@ -463,6 +514,7 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
 
                     if (flags & MPRINTF_FLAG_LONGLONG) {
                         const long long value = va_arg(args, long long);
+                        mprintf_ntoa_long_long(out, MPRINTF_ABS(value), value < 0, 10, prec, width, flags);
                     }
                     else if (flags & MPRINTF_FLAG_LONG) {
                         const long value = va_arg(args, long);
@@ -527,7 +579,7 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     }
 
                     if (flags & MPRINTF_FLAG_LONGLONG) {
-                        /* mprintf_ntoa_long_long(out, va_arg(va, unsigned long long), false, base, prec, width, flags); */
+                        mprintf_ntoa_long_long(out, va_arg(args, unsigned long long), false, base, prec, width, flags);
                     }
                     else if (flags & MPRINTF_FLAG_LONG) {
                         mprintf_ntoa_long(out, va_arg(args, unsigned long), false, base, prec, width, flags);
@@ -604,6 +656,32 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
                     break;
                 case 's':
                     /* String of characters */
+                    str = (char *)va_arg(args, char *);
+                    /* Calculate length of string to be outputted (precision or whole string) */
+                    len = mstr_strnlen(str, prec ? prec : SIZE_MAX);
+                    if (flags & MPRINTF_FLAG_PRECISION) {
+                        len = (len < prec) ? len : prec;
+                    }
+                    /* Left Padding */
+                    if (!(flags & MPRINTF_FLAG_LEFTJUST)) {
+                        for (; len < width; len++) {
+#ifdef MPRINTF_ALLOW_CHARACTER_ZEROPAD
+                            mprintf_putchar(out, (flags & MPRINTF_FLAG_ZEROPAD) ? '0' : ' ');
+#else
+                            mprintf_putchar(out, ' ');
+#endif
+                        }
+                    }
+                    /* Output string - precision characters or whole string (same as len) */
+                    for (; *str && (!(flags & MPRINTF_FLAG_PRECISION) || prec); prec--, str++) {
+                        mprintf_putchar(out, *str);
+                    }
+                    /* Right Padding */
+                    if (flags & MPRINTF_FLAG_LEFTJUST) {
+                        for (; len < width; len++) {
+                            mprintf_putchar(out, ' ');
+                        }
+                    }
                     fmt++;
                     break;
                 case 'p':
@@ -627,11 +705,46 @@ void mprintf_format_loop(struct mprintf_output *out, const char *fmt, va_list ar
             }
         }
     }
+    mprintf_terminate(out);
+    return (int)out->pos;
 }
 
-void mprintf_printf(const char *fmt, ...) {
+/* Interfaces */
+
+int mprintf_sprintf(char *buf, const char *fmt, ...) {
+    int result;
     va_list args;
     va_start(args, fmt);
-    mprintf_format_loop(&mprintf_console_output, fmt, args);
+    result = mprintf_vsprintf(buf, fmt, args) ;
     va_end(args);
+    return result;
+}
+
+int mprintf_vsprintf(char *buf, const char *fmt, va_list va) {
+    struct mprintf_output output = {.func = NULL, .buf = buf, .pos = 0, .max = SIZE_MAX};
+    return mprintf_format_loop(&output, fmt, va);
+}
+
+int mprintf_snprintf(char *buf, size_t count, const char *fmt, ...) {
+    int result;
+    va_list args;
+    va_start(args, fmt);
+    result = mprintf_vsnprintf(buf, count, fmt, args) ;
+    va_end(args);
+    return result;
+}
+
+int mprintf_vsnprintf(char *buf, size_t count, const char *fmt, va_list va) {
+    struct mprintf_output output = {.func = NULL, .buf = buf, .pos = 0, .max = count};
+    return mprintf_format_loop(&output, fmt, va);
+}
+
+int mprintf_funprintf(void (*out)(char c), const char *fmt, ...) {
+    int result;
+    va_list args;
+    struct mprintf_output output = {.func = out, .buf = NULL, .pos = 0, .max = SIZE_MAX};
+    va_start(args, fmt);
+    result = mprintf_format_loop(&output, fmt, args);
+    va_end(args);
+    return result;
 }

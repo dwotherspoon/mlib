@@ -16,5 +16,6 @@ char *mstr_strrev(char *str);
 int mstr_atoi(const char *str);
 char *mstr_itoa(int value, char *str, int base);
 size_t mstr_strlen(char *str);
+size_t mstr_strnlen(char *str, size_t max);
 
 #endif

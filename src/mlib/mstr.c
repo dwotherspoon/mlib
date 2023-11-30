@@ -1,4 +1,5 @@
 #include <mlib/mstr.h>
+#include <stdint.h>
 
 int mstr_atoi(const char *str) {
     int result;
@@ -10,9 +11,12 @@ int mstr_atoi(const char *str) {
 }
 
 size_t mstr_strlen(char *str) {
+    return mstr_strnlen(str, SIZE_MAX);
+}
+
+size_t mstr_strnlen(char *str, size_t max) {
     char *s = str;
-    while (*s) {
-        s++;
+    for ( ; *s && max; s++, max-- ) {
     }
     return s - str;
 }
