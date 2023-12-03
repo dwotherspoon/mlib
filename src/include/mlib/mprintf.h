@@ -15,5 +15,6 @@ int mprintf_vsprintf(char *buf, const char *fmt, va_list va);
 int mprintf_snprintf(char *buf, size_t count, const char *fmt, ...);
 int mprintf_vsnprintf(char *buf, size_t count, const char *fmt, va_list va);
 int mprintf_funprintf(void (*out)(char c), const char *fmt, ...);
+int mprintf_vfunprintf(void (*out)(char c), const char *fmt, va_list va);
 
 #endif

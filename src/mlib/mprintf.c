@@ -742,9 +742,13 @@ int mprintf_vsnprintf(char *buf, size_t count, const char *fmt, va_list va) {
 int mprintf_funprintf(void (*out)(char c), const char *fmt, ...) {
     int result;
     va_list args;
-    struct mprintf_output output = {.func = out, .buf = NULL, .pos = 0, .max = SIZE_MAX};
     va_start(args, fmt);
-    result = mprintf_format_loop(&output, fmt, args);
+    result = mprintf_vfunprintf(out, fmt, args);
     va_end(args);
     return result;
+}
+
+int mprintf_vfunprintf(void (*out)(char c), const char *fmt, va_list va) {
+    struct mprintf_output output = {.func = out, .buf = NULL, .pos = 0, .max = SIZE_MAX};
+    return mprintf_format_loop(&output, fmt, va);
 }
