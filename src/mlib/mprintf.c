@@ -51,7 +51,7 @@ struct mprintf_output {
 
 /* Put a char to the output device or string */
 void mprintf_putchar(struct mprintf_output *out, char c) {
-    out->pos++;
+    size_t write_pos = out->pos++;
 
     if (out->pos >= out->max) {
         return;
@@ -60,7 +60,7 @@ void mprintf_putchar(struct mprintf_output *out, char c) {
     if (out->func != NULL) {
         out->func(c);
     } else {
-        out->buf[out->pos] = c;
+        out->buf[write_pos] = c;
     }
 }
 
@@ -190,7 +190,7 @@ size_t mprintf_ntoa_long(struct mprintf_output *out, unsigned long value, bool n
     if (value) {
         for (; value && (len < MPRINTF_NTOA_BUFFER_LEN); len++) {
             const char digit = (char)(value % base);
-            buf[len] = (flags & MPRINTF_FLAG_UPPERCASE) ? mprintf_lowercase_digit_lut[digit] : mprintf_uppercase_digit_lut[digit];
+            buf[len] = (flags & MPRINTF_FLAG_UPPERCASE) ? mprintf_uppercase_digit_lut[digit] : mprintf_lowercase_digit_lut[digit];
             value /= base;
         }
     }
@@ -219,7 +219,7 @@ size_t mprintf_ntoa_long_long(struct mprintf_output *out, unsigned long long val
     if (value) {
         for (; value && (len < MPRINTF_NTOA_BUFFER_LEN); len++) {
             const char digit = (char)(value % base);
-            buf[len] = (flags & MPRINTF_FLAG_UPPERCASE) ? mprintf_lowercase_digit_lut[digit] : mprintf_uppercase_digit_lut[digit];
+            buf[len] = (flags & MPRINTF_FLAG_UPPERCASE) ? mprintf_uppercase_digit_lut[digit] : mprintf_lowercase_digit_lut[digit];
             value /= base;
         }
     }
