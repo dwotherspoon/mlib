@@ -715,7 +715,7 @@ int mprintf_sprintf(char *buf, const char *fmt, ...) {
     int result;
     va_list args;
     va_start(args, fmt);
-    result = mprintf_vsprintf(buf, fmt, args) ;
+    result = mprintf_vsprintf(buf, fmt, args);
     va_end(args);
     return result;
 }
@@ -729,7 +729,7 @@ int mprintf_snprintf(char *buf, size_t count, const char *fmt, ...) {
     int result;
     va_list args;
     va_start(args, fmt);
-    result = mprintf_vsnprintf(buf, count, fmt, args) ;
+    result = mprintf_vsnprintf(buf, count, fmt, args);
     va_end(args);
     return result;
 }
