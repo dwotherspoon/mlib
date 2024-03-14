@@ -10,11 +10,11 @@ int mstr_atoi(const char *str) {
     return result;
 }
 
-size_t mstr_strlen(char *str) {
+size_t mstr_strlen(const char *str) {
     return mstr_strnlen(str, SIZE_MAX);
 }
 
-size_t mstr_strnlen(char *str, size_t max) {
+size_t mstr_strnlen(const char *str, size_t max) {
     char *s = str;
     for ( ; *s && max; s++, max-- ) {
     }
@@ -63,4 +63,20 @@ char *mstr_itoa(int value, char *str, int base) {
     mstr_strrev(&str[start_idx]);
 
     return str;
+}
+
+int mstr_strcmp(const char *str1, const char *str2) {
+    return mstr_strncmp(str1, str2, SIZE_MAX);
+}
+
+int mstr_strncmp(const char *str1, const char *str2, size_t num) {
+    char c1 = '\0', c2 = '\0';
+    for (; num; num--) {
+        c1 = *str1++;
+        c2 = *str2++;
+        if (c1 == '\0' || c1 != c2) {
+            return c1 - c2;
+        }
+    }
+    return c1 - c2;
 }

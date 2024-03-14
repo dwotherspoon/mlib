@@ -1,10 +1,15 @@
 #include <stdio.h>
+#include <string.h>
 
 #include <mlib/mfat.h>
 #include <mlib/mprintf.h>
 #include <mlib/mstr.h>
 
-#define mprintf_printf(...) mprintf_funprintf(putchar, __VA_ARGS__)
+void putchar_wrapper(char c) {
+    putchar(c);
+}
+
+#define mprintf_printf(...) mprintf_funprintf(putchar_wrapper,  __VA_ARGS__)
 
 struct fp_info {
     char *path;
@@ -129,6 +134,15 @@ int main(int argc, char *argv[]) {
 
     mprintf_printf("M%s\n", test_str2);
     printf("%s\n", test_str2);
+
+
+    char *stra = "abcde";
+    char *strb = "abc";
+
+    printf("strcmp(stra, strb) %i (%i)\n", mstr_strcmp(stra, strb), strcmp(stra, strb));
+    printf("strcmp(strb, stra) %i (%i)\n", mstr_strcmp(strb, stra), strcmp(strb, stra));
+    printf("strcmp(stra, strb, 3) %i (%i)\n", mstr_strncmp(stra, strb, 3), strncmp(stra, strb, 3));
+    printf("strcmp(strb, stra, 3) %i (%i)\n", mstr_strncmp(strb, stra, 3), strncmp(strb, stra, 3));
 
     return 0;
 }

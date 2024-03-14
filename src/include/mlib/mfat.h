@@ -36,7 +36,7 @@ struct mfat_fs {
     uint8_t buf_state;
     /* Current LBA in buffer */
     uint64_t buf_lba;
-	uint8_t	buf[MFAT_MAX_SECTORSZ];
+	uint8_t	buf[MFAT_MAX_SECTOR_SZ];
 };
 
 struct mfat_globals {
