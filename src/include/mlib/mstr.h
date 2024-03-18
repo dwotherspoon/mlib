@@ -15,7 +15,9 @@
 char *mstr_strrev(char *str);
 int mstr_atoi(const char *str);
 char *mstr_itoa(int value, char *str, int base);
-size_t mstr_strlen(char *str);
-size_t mstr_strnlen(char *str, size_t max);
+size_t mstr_strlen(const char *str);
+size_t mstr_strnlen(const char *str, size_t max);
+int mstr_strncmp(const char *str1, const char *str2, size_t num);
+int mstr_strcmp(const char *str1, const char *str2);
 
 #endif
