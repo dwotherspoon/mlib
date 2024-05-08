@@ -5,11 +5,7 @@
 #include <mlib/mprintf.h>
 #include <mlib/mstr.h>
 
-void putchar_wrapper(char c) {
-    putchar(c);
-}
-
-#define mprintf_printf(...) mprintf_funprintf(putchar_wrapper,  __VA_ARGS__)
+#define mprintf_printf(...) mprintf_funprintf((char (*)(char))putchar,  __VA_ARGS__)
 
 struct fp_info {
     char *path;

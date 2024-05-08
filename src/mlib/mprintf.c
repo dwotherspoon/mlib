@@ -43,7 +43,7 @@
 #define MPRINTF_FTOA_DEFAULT_PRECISION (6)
 
 struct mprintf_output {
-    void (*func)(char c);
+    char (*func)(char c);
     char *buf;
     size_t pos;
     size_t max;
@@ -739,7 +739,7 @@ int mprintf_vsnprintf(char *buf, size_t count, const char *fmt, va_list va) {
     return mprintf_format_loop(&output, fmt, va);
 }
 
-int mprintf_funprintf(void (*out)(char c), const char *fmt, ...) {
+int mprintf_funprintf(char (*out)(char c), const char *fmt, ...) {
     int result;
     va_list args;
     va_start(args, fmt);
@@ -748,7 +748,7 @@ int mprintf_funprintf(void (*out)(char c), const char *fmt, ...) {
     return result;
 }
 
-int mprintf_vfunprintf(void (*out)(char c), const char *fmt, va_list va) {
+int mprintf_vfunprintf(char (*out)(char c), const char *fmt, va_list va) {
     struct mprintf_output output = {.func = out, .buf = NULL, .pos = 0, .max = SIZE_MAX};
     return mprintf_format_loop(&output, fmt, va);
 }
