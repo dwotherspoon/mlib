@@ -19,5 +19,6 @@ size_t mstr_strlen(const char *str);
 size_t mstr_strnlen(const char *str, size_t max);
 int mstr_strncmp(const char *str1, const char *str2, size_t num);
 int mstr_strcmp(const char *str1, const char *str2);
+char *mstr_strncpy(char *dest, const char *src, size_t num);
 
 #endif

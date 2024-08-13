@@ -80,3 +80,14 @@ int mstr_strncmp(const char *str1, const char *str2, size_t num) {
     }
     return c1 - c2;
 }
+
+char *mstr_strncpy(char *dest, const char *src, size_t num) {
+    size_t i;
+    for (i = 0; src[i] && i < num; i++) {
+        dest[i] = src[i];
+    }
+    for (; i < num; i++) {
+        dest[i] = '\0';
+    }
+    return dest;
+}
