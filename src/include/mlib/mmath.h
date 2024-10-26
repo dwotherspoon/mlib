@@ -6,6 +6,6 @@
 double mmath_sind(double x);
 float mmath_sinf(float x);
 int mmath_floorf(float x);
-int mmath_floord(double x)
+int mmath_floord(double x);
 
 #endif

@@ -7,36 +7,18 @@
 
 #define mprintf_printf(...) mprintf_funprintf((char (*)(char))putchar,  __VA_ARGS__)
 
-struct fp_info {
-    char *path;
-    FILE *fp;
-};
 
-enum mfat_device_status fp_status(void *user) {
-    return MFAT_DEVICE_STATUS_OK;
-}
-
-enum mfat_device_status fp_init(void *user) {
-    return MFAT_DEVICE_STATUS_OK;
-}
-
-enum mfat_device_result fp_read(void *user, uint8_t *buf, uint64_t lba, uint32_t count) {
-    return MFAT_DEVICE_RESULT_OK;
-}
-
-enum mfat_device_result fp_write(void *user, uint8_t *buf, uint64_t lba, uint32_t count) {
-    return MFAT_DEVICE_RESULT_OK;
-}
-
-enum mfat_device_result fp_ioctl(void *user, uint8_t *buf, uint64_t lba, uint32_t count) {
-    return MFAT_DEVICE_RESULT_OK;
-}
 
 void test_mstr_strncpy() {
     char stra[10] = {0};
     char strb[10] = {0};
 
     mstr_strncpy(strb, stra, 1);
+}
+
+void test_mstr_printf() {
+    mprintf_funprintf(putchar,
+                        "INIT %s (%s) @ %iMHz\r\n", "STM32H743", "Arm Cortex-M7", 0);
 }
 
 int main(int argc, char *argv[]) {
@@ -148,6 +130,8 @@ int main(int argc, char *argv[]) {
     printf("strcmp(strb, stra, 3) %i (%i)\n", mstr_strncmp(strb, stra, 3), strncmp(strb, stra, 3));
 
     test_mstr_strncpy();
+
+    test_mstr_printf();
 
     return 0;
 }
