@@ -27,7 +27,7 @@ enum mfat_device_status fp_init(void *user) {
 enum mfat_device_result fp_read(void *user, uint8_t *buf, uint64_t lba, uint32_t count) {
     struct fp_info *info = (struct fp_info *)user;
     size_t result;
-    printf("READ CALLED, user = %p, lba = %lu\n", user, lba);
+    printf("READ CALLED, user = %p, lba = %lx\n", user, lba);
     if (info->fp == NULL) {
         return MFAT_DEVICE_RESULT_ERROR;
     }
@@ -42,11 +42,11 @@ enum mfat_device_result fp_read(void *user, uint8_t *buf, uint64_t lba, uint32_t
 }
 
 enum mfat_device_result fp_write(void *user, uint8_t *buf, uint64_t lba, uint32_t count) {
-    return MFAT_DEVICE_STATUS_OK;
+    return MFAT_DEVICE_RESULT_OK;
 }
 
 enum mfat_device_result fp_ioctl(void *user, uint8_t cmd, void *buf) {
-    return MFAT_DEVICE_STATUS_OK;
+    return MFAT_DEVICE_RESULT_OK;
 }
 
 struct fp_info info;
@@ -64,6 +64,8 @@ struct mfat_device dev = {
 
 int main(int argc, char *argv[]) {
     struct mfat_fs fs;
+    struct mfat_dir dir;
+    struct mfat_dir_entry dirent;
     enum mfat_result res;
     if (argc != 2) {
         puts("Usage: test_mfat <test.fs>");
@@ -72,8 +74,17 @@ int main(int argc, char *argv[]) {
     printf("Using file %s\n", argv[1]);
     info.path = argv[1];
     info.fp = NULL;
+
     res = mfat_mount(&fs, &dev, 0, 0);
     printf("mfat_mount returned %i = %s\n", res, mfat_result_lut[res]);
+
+    res = mfat_opendir(&dir, "A:\\");
+    printf("mfat_opendir returned %i = %s\n", res, mfat_result_lut[res]);
+
+    do {
+        res = mfat_readdir(&dir, &dirent);
+        printf("mfat_readdir returned %i = %s\n", res, mfat_result_lut[res]);
+    } while(res == MFAT_RESULT_OK);
 
     if (info.fp) {
         fclose(info.fp);
