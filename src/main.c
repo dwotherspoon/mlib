@@ -4,6 +4,8 @@
 #include <mlib/mfat.h>
 #include <mlib/mprintf.h>
 #include <mlib/mstr.h>
+#include <mlib/mmath.h>
+#include <math.h>
 
 #define mprintf_printf(...) mprintf_funprintf((char (*)(char))putchar,  __VA_ARGS__)
 
@@ -89,8 +91,6 @@ int main(int argc, char *argv[]) {
     mprintf_printf("M%F\n", POS_INF);
     printf("M%F\n", POS_INF);
 
-    double NAN = 0.0/0.0;
-
     mprintf_printf("M%f\n", NAN);
     printf("M%f\n", NAN);
 
@@ -132,6 +132,101 @@ int main(int argc, char *argv[]) {
     test_mstr_strncpy();
 
     test_mstr_printf();
+
+    printf("floor(+2.7) = +2.0 = %d\n", mmath_floord(+2.7));
+    printf("floor(-2.7) = -3.0 = %d\n", mmath_floord(-2.7));
+    printf("floor(-0.0) = -0.0 = %d\n", mmath_floord(-0.0));
+    printf("floor(-Inf) = -inf = %d\n", mmath_floord(MMATH_NEG_INF));
+
+
+    printf("ceil(+2.4) = +3.0 = %d\n", mmath_ceild(+2.4));
+    printf("ceil(-2.4) = -2.0 = %d\n", mmath_ceild(-2.4));
+    printf("ceil(-0.0) = -0.0 = %d\n", mmath_ceild(-0.0));
+    printf("ceil(-Inf) = -inf = %d\n", mmath_ceild(MMATH_NEG_INF));
+
+    printf("sind(-2.0 * PI) = %f, %f\n\n", mmath_sind(-2.0 * MMATH_PI), sin(-2.0 * MMATH_PI));
+
+    printf("sind(-1.875 * PI) = %f, %f\n\n", mmath_sind(-1.875 * MMATH_PI), sin(-1.875 * MMATH_PI));
+
+    printf("sind(-1.75 * PI) = %f, %f\n\n", mmath_sind(-1.75 * MMATH_PI), sin(-1.75 * MMATH_PI));
+
+    printf("sind(-1.625 * PI) = %f, %f\n\n", mmath_sind(-1.625 * MMATH_PI), sin(-1.625 * MMATH_PI));
+
+    printf("sind(-1.5 * PI) = %f, %f\n\n", mmath_sind(-1.5 * MMATH_PI), sin(-1.5 * MMATH_PI));
+
+    printf("sind(-1.375 * PI) = %f, %f\n\n", mmath_sind(-1.375  * MMATH_PI), sin(-1.375  * MMATH_PI));
+
+    printf("sind(-1.25 * PI) = %f, %f\n\n", mmath_sind(-1.25 * MMATH_PI), sin(-1.25 * MMATH_PI));
+
+    printf("sind(-1.0 * PI) = %f, %f\n\n", mmath_sind(-1.0 * MMATH_PI), sin(-1.0 * MMATH_PI));
+
+    printf("sind(-0.75 * PI) = %f, %f\n\n", mmath_sind(-0.75 * MMATH_PI), sin(-0.75 * MMATH_PI));
+
+    printf("sind(-0.625 * PI) = %f, %f\n\n", mmath_sind(-0.625 * MMATH_PI), sin(-0.625 * MMATH_PI));
+
+    printf("sind(-0.5 * PI) = %f, %f\n\n", mmath_sind(-0.5 * MMATH_PI), sin(-0.5 * MMATH_PI));
+
+    printf("sind(-0.375 * PI) = %f, %f\n\n", mmath_sind(-0.375 * MMATH_PI), sin(-0.375 * MMATH_PI));
+
+    printf("sind(-0.25 * PI) = %f, %f\n\n", mmath_sind(-0.25 * MMATH_PI), sin(-0.25 * MMATH_PI));
+
+    printf("sind(-0.125 * PI) = %f, %f\n\n", mmath_sind(-0.125 * MMATH_PI), sin(-0.125 * MMATH_PI));
+
+    printf("sind(0.0) = %f, %f\n\n", mmath_sind(0.0), sin(0.0));
+
+    printf("sind(0.0625 * PI) = %f, %f\n\n", mmath_sind(0.0625 * MMATH_PI), sin(0.0625 * MMATH_PI));
+
+    printf("sind(0.125 * PI) = %f, %f\n\n", mmath_sind(0.125 * MMATH_PI), sin(0.125 * MMATH_PI));
+
+    printf("sind(0.1875 * PI) = %f, %f\n\n", mmath_sind(0.1875 * MMATH_PI), sin(0.1875 * MMATH_PI));
+
+    printf("sind(0.25 * PI) = %f, %f\n\n", mmath_sind(0.25 * MMATH_PI), sin(0.25 * MMATH_PI));
+
+    printf("sind(0.3125 * PI) = %f, %f\n\n", mmath_sind(0.3125 * MMATH_PI), sin(0.3125 * MMATH_PI));
+
+    printf("sind(0.375 * PI) = %f, %f\n\n", mmath_sind(0.375 * MMATH_PI), sin(0.375 * MMATH_PI));
+
+    printf("sind(0.4375 * PI) = %f, %f\n\n", mmath_sind(0.4375 * MMATH_PI), sin(0.4375 * MMATH_PI));
+
+    printf("sind(0.5 * PI) = %f, %f\n\n", mmath_sind(0.5 * MMATH_PI), sin(0.5 * MMATH_PI));
+
+    printf("sind(0.625 * PI) = %f, %f\n\n", mmath_sind(0.625 * MMATH_PI), sin(0.625 * MMATH_PI));
+
+    printf("sind(0.75 * PI) = %f, %f\n\n", mmath_sind(0.75 * MMATH_PI), sin(0.75 * MMATH_PI));
+
+    printf("sind(1.0 * PI) = %f, %f\n\n", mmath_sind(1.0 * MMATH_PI), sin(1.0 * MMATH_PI));
+
+    printf("sind(1.25 * PI) = %f, %f\n\n", mmath_sind(1.25 * MMATH_PI), sin(1.25 * MMATH_PI));
+
+    printf("sind(1.5 * PI) = %f, %f\n\n", mmath_sind(1.5 * MMATH_PI), sin(1.5 * MMATH_PI));
+
+    printf("sind(1.75 * PI) = %f, %f\n\n", mmath_sind(1.75 * MMATH_PI), sin(1.75 * MMATH_PI));
+
+    printf("sind(2.0 * PI) = %f, %f\n\n", mmath_sind(2.0 * MMATH_PI), sin(2.0 * MMATH_PI));
+
+
+    for (double scale = 0.0; scale < 1.0; scale += 0.1) {
+        puts("----------------------------------------");
+        double arg = (MMATH_PI / 2.0) * scale;
+        printf("sind(%f * (PI/2)) = %f (mmath) = %f (math), (arg = %f)\n\n",
+            scale, mmath_sind(arg), sin(arg), arg);
+        arg += (MMATH_PI / 2.0);
+        printf("sind(%f * (PI/2)) = %f (mmath) = %f (math), (arg = %f)\n\n",
+            scale, mmath_sind(arg), sin(arg), arg);
+        arg += (MMATH_PI / 2.0);
+        printf("sind(%f * (PI/2)) = %f (mmath) = %f (math), (arg = %f)\n\n",
+            scale, mmath_sind(arg), sin(arg), arg);
+        arg += (MMATH_PI / 2.0);
+        printf("sind(%f * (PI/2)) = %f (mmath) = %f (math), (arg = %f)\n\n",
+            scale, mmath_sind(arg), sin(arg), arg);
+
+    }
+
+    for (double arg = -3.0; arg < 4.5; arg += 0.01) {
+        printf("atand(%f) = %f (mmath) = %f (math)\n\n",
+            arg, mmath_atand(arg), atan(arg));
+    }
+
 
     return 0;
 }

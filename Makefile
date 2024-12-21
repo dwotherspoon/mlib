@@ -7,7 +7,7 @@ TARGET_MFAT = test_mfat
 MLIB_OBJS = src/mlib/mstr.o src/mlib/mfat.o src/mlib/mprintf.o src/mlib/mmath.o
 
 test: $(MLIB_OBJS)
-	$(CC) $(CFLAGS) $(MLIB_OBJS) src/main.c -o $(TARGET_TEST)
+	$(CC) $(CFLAGS) $(MLIB_OBJS) src/main.c -lm -o $(TARGET_TEST)
 
 mfat: $(MLIB_OBJS)
 	$(CC) $(CFLAGS) $(MLIB_OBJS) src/test_mfat.c -o $(TARGET_MFAT)
