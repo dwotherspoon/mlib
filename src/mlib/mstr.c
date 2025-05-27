@@ -91,3 +91,13 @@ char *mstr_strncpy(char *dest, const char *src, size_t num) {
     }
     return dest;
 }
+
+char *mstr_strnchr(char *str, size_t num, const char chr) {
+    for(; num; num--) {
+        if(*str == chr) {
+            return str;
+        }
+        str++;
+    }
+    return NULL;
+}
