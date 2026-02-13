@@ -4,13 +4,51 @@
 #include <stddef.h>
 
 /* Common string functions required by mprintf and mfat */
+static inline int mstr_isupper(unsigned char c) {
+    return c >= 'A' && c <= 'Z';
+}
 
-#define mstr_isupper(C)      ((C) >= 'A' && (C) <= 'Z')
-#define mstr_islower(C)      ((C) >= 'a' && (C) <= 'z')
-#define mstr_isdigit(C)      ((C) >= '0' && (C) <= '9')
-#define mstr_issep(C)        ((C) == '/' || (C) == '\\')
-#define mstr_iswhitespace(C) ((C) == ' ' || (C) == '\t' || (C) == '\r' || (C) == '\n' || (C) == '\v' || (C) == '\f')
-#define mstr_toupper(C)      (mstr_islower(C) ? ((C) - ('a' - 'A')) : (C))
+static inline int mstr_islower(unsigned char c) {
+    return c >= 'a' && c <= 'z';
+}
+
+static inline int mstr_isdigit(unsigned char c) {
+    return c >= '0' && c <= '9';
+}
+
+static inline int mstr_iswhitespace(unsigned char c) {
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\v' || c == '\f';
+}
+
+static inline int mstr_issep(unsigned char c) {
+    return c == '/' || c == '\\';
+}
+
+static inline unsigned char mstr_toupper(unsigned char c) {
+    return mstr_islower(c) ? (c - ('a' - 'A')) : c;
+}
+
+static inline unsigned char mstr_tolower(unsigned char c) {
+    return mstr_islower(c) ? (c + ('a' - 'A')) : c;
+}
+
+static inline int mstr_ishexdigit(unsigned char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+}
+
+static inline int mstr_hextonibble(unsigned char c) {
+    if (mstr_isdigit(c)) {
+        return c - '0';
+    }
+    if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    }
+    if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    }
+    /* Error */
+    return -1;
+}
 
 char *mstr_strrev(char *str);
 int mstr_atoi(const char *str);
