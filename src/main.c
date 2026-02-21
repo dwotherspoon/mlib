@@ -221,12 +221,12 @@ int main(int argc, char *argv[]) {
             scale, mmath_sind(arg), sin(arg), arg);
 
     }
-
+/*
     for (double arg = -3.0; arg < 4.5; arg += 0.01) {
         printf("atand(%f) = %f (mmath) = %f (math)\n\n",
             arg, mmath_atand(arg), atan(arg));
     }
-
+*/
 
     return 0;
 }

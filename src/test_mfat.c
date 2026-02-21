@@ -49,20 +49,8 @@ enum mfat_device_result fp_ioctl(void *user, uint8_t cmd, void *buf) {
     return MFAT_DEVICE_RESULT_OK;
 }
 
-struct fp_info info;
-
-struct mfat_device dev = {
-    .status = fp_status,
-    .init = fp_init,
-    .read = fp_read,
-    .write = fp_write,
-    .ioctl = fp_ioctl,
-    .user = &info
-};
-
-
-
 int main(int argc, char *argv[]) {
+    struct fp_info info;
     struct mfat_fs fs;
     struct mfat_dir dir;
     struct mfat_dir_entry dirent;
@@ -71,6 +59,17 @@ int main(int argc, char *argv[]) {
         puts("Usage: test_mfat <test.fs>");
         return -1;
     }
+
+    struct mfat_device dev = {
+        .status = fp_status,
+        .init = fp_init,
+        .read = fp_read,
+        .write = fp_write,
+        .ioctl = fp_ioctl,
+        .user = &info
+    };
+
+
     printf("Using file %s\n", argv[1]);
     info.path = argv[1];
     info.fp = NULL;
@@ -82,9 +81,29 @@ int main(int argc, char *argv[]) {
     printf("mfat_opendir returned %i = %s\n", res, mfat_result_lut[res]);
 
     do {
+        puts("-----------------");
         res = mfat_readdir(&dir, &dirent);
-        printf("mfat_readdir returned %i = %s\n", res, mfat_result_lut[res]);
+        puts("-----------------");
+        printf("readdir returned %i = %s\n", res, mfat_result_lut[res]);
+        printf("Short name = %s\n", dirent.short_name);
+        printf("Long name = %s\n", dirent.name);
+        printf("Start cluster = %u\n", dirent.start_cluster);
+        printf("Volume id = %u\n", dirent.vol_id);
+        printf("File size = %u\n", dirent.size);
     } while(res == MFAT_RESULT_OK);
+
+
+
+    res = mfat_readdir(&dir, 0);
+    printf("TRY REWIND, readdir returned %i = %s\n", res, mfat_result_lut[res]);
+    res = mfat_readdir(&dir, &dirent);
+    puts("-----------------");
+    printf("readdir returned %i = %s\n", res, mfat_result_lut[res]);
+    printf("Short name = %s\n", dirent.short_name);
+    printf("Long name = %s\n", dirent.name);
+    printf("Start cluster = %u\n", dirent.start_cluster);
+    printf("Volume id = %u\n", dirent.vol_id);
+    printf("File size = %u\n", dirent.size);
 
     if (info.fp) {
         fclose(info.fp);

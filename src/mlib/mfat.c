@@ -1,7 +1,7 @@
 #include <mlib/mfat.h>
 #include <mlib/mstr.h>
 #include <mlib/mcommon.h>
-
+#include <stdio.h>
 
 char *mfat_result_lut[] = {
     [MFAT_RESULT_OK]                = "MFAT_RESULT_OK",
@@ -12,6 +12,55 @@ char *mfat_result_lut[] = {
     [MFAT_RESULT_NO_FILE]           = "MFAT_RESULT_NO_FILE",
 	[MFAT_RESULT_TODO]              = "MFAT_RESULT_TODO"
 };
+
+/* /* Restrictions on characters comprising the name:
+ * Lower case characters are not allowed
+ * Illegal values for characters in the name are as follows:
+ * - Values less than 0x20 other than 0x05 for Kanji in first char
+ * - 0x22, [0x2a .. 0x2c], [0x2e .. 0x2f], [0x3a .. 0x3f], [0x5b .. 0x5d], 0x7c
+ * - Name may not start with 0x20 */
+static inline int mfat_is_valid_sf_char(char c) {
+    if (c < 0x20) {
+        return 0;
+    }
+    switch (c) {
+        case '"':
+            /* Fallthrough */
+        case '*':
+            /* Fallthrough */
+        case '+':
+            /* Fallthrough */
+        case ',':
+            /* Fallthrough */
+        case '/':
+            /* Fallthrough */
+        case ':':
+            /* Fallthrough */
+        case ';':
+            /* Fallthrough */
+        case '<':
+            /* Fallthrough */
+        case '=':
+            /* Fallthrough */
+        case '>':
+            /* Fallthrough */
+        case '?':
+            /* Fallthrough */
+        case '[':
+            /* Fallthrough */
+        case '\\':
+            /* Fallthrough */
+        case ']':
+            /* Fallthrough */
+        case '|':
+            return 0;
+    }
+    return 1;
+}
+
+static inline uint64_t mfat_cluster_to_sector(struct mfat_fs *fs, uint32_t cluster) {
+    return fs->data_start_sector + ((uint64_t)(cluster - 2) * fs->cluster_sz);
+}
 
 static size_t mfat_utf16_to_utf8(uint16_t chr, uint8_t *buf) {
     /* This isn't strictly true, and doesn't cover:
@@ -39,7 +88,7 @@ static size_t mfat_utf16_to_utf8(uint16_t chr, uint8_t *buf) {
     } else if (uval < 0xffff) {
         /* Three bytes */
         /* 0b1110wwww */
-        *buf++ = 0xe | ((uval >> 12) & 0xf);
+        *buf++ = 0xe0 | ((uval >> 12) & 0x0f);
         /* 0b10xxxxyy */
         *buf++ = 0x80 | ((uval >> 6) & 0x3f);
         /* 0b10yyzzzz */
@@ -66,15 +115,13 @@ static enum mfat_result mfat_load_buffer(struct mfat_fs *fs,
             if (fs->device->write(fs->device->user, fs->buf, fs->buf_sector, 1)
                                         != MFAT_DEVICE_RESULT_OK) {
                 return MFAT_RESULT_DEVICE_ERROR;
-            } else if ((fs->num_fats == 2)
-                        && (fs->buf_sector >= fs->fat_start_sector)
-                        && (fs->buf_sector < (fs->fat_start_sector + fs->fat_sz))) {
+            } else if ((fs->num_fats == 2) && (fs->buf_sector >= fs->fat_start_sector) &&
+                                        (fs->buf_sector < (fs->fat_start_sector + fs->fat_sz))) {
                 // Sync to second fat
                 return MFAT_RESULT_TODO;
             }
         }
-        if(fs->device->read(fs->device->user, fs->buf, sector, 1)
-                                        != MFAT_DEVICE_RESULT_OK) {
+        if(fs->device->read(fs->device->user, fs->buf, sector, 1) != MFAT_DEVICE_RESULT_OK) {
             fs->buf_sector = MFAT_INVALID_SECTOR;
             return MFAT_RESULT_DEVICE_ERROR;
         }
@@ -91,15 +138,14 @@ static enum mfat_result mfat_load_buffer(struct mfat_fs *fs,
  * 3 -> Valid boot sig only
  * 4 -> Invalid
 */
-static enum mfat_result mfat_check_filesystem(struct mfat_fs *fs, uint64_t sector,
-                                            enum mfat_fs_type *type) {
+static enum mfat_result mfat_check_filesystem(struct mfat_fs *fs, uint64_t sector) {
     enum mfat_result res;
     uint8_t secs_per_clus, num_fats;
     uint16_t bootsig, bytes_per_sec, reserved_secs, root_ent_cnt, fat_sz16;
     uint32_t jmpboot, total_secs, root_dir_secs, data_secs;
     uint32_t clus_cnt, fat_sz, system_secs, temp;
 
-    *type = MFAT_FS_TYPE_INVALID;
+    printf("mfat_check_filesystem\n");
     fs->buf_state = 0;
     fs->buf_sector = MFAT_INVALID_SECTOR;
     res = mfat_load_buffer(fs, sector);
@@ -113,15 +159,16 @@ static enum mfat_result mfat_check_filesystem(struct mfat_fs *fs, uint64_t secto
     jmpboot = fs->buf[MFAT_COMMON_BS_OFFS_JMPBOOT + 2]
                 | (fs->buf[MFAT_COMMON_BS_OFFS_JMPBOOT + 1] << 8)
                 | (fs->buf[MFAT_COMMON_BS_OFFS_JMPBOOT] << 16);
+    printf("bootsig = %04x, jmpboot = %08x\n", bootsig, jmpboot);
 
-    if (bootsig = 0xa55 && jmpboot == 0xeb7690
-        && !mstr_strncmp(fs->buf + MFAT_EXFAT_BS_OFFS_FILESYSTEMNAME,
-                                                        "EXFAT   ", 8)) {
+    if (bootsig == 0xaa55 && jmpboot == 0xeb7690 &&
+                        !mstr_strncmp(fs->buf + MFAT_EXFAT_BS_OFFS_FILESYSTEMNAME, "EXFAT   ", 8)) {
         /* It is mandatory that EXFAT FileSystemName field is correctly set. */
         return 0;
     /* Check for jmpboot in form 0xe9???? or 0xeb??90 */
     } else if (((jmpboot & 0xfd0000) == 0xe90000)
                 && (!(jmpboot & 0x20000) || ((jmpboot & 0xff) == 0x90))) {
+        printf("jmpboot\n");
         bytes_per_sec = fs->buf[MFAT_COMMON_BPB_OFFS_BYTSPERSEC]
                             | (fs->buf[MFAT_COMMON_BPB_OFFS_BYTSPERSEC + 1] << 8);
         secs_per_clus = fs->buf[MFAT_COMMON_BPB_OFFS_SECPERCLUS];
@@ -132,6 +179,7 @@ static enum mfat_result mfat_check_filesystem(struct mfat_fs *fs, uint64_t secto
                             | (fs->buf[MFAT_COMMON_BPB_OFFS_ROOTENTCOUNT + 1] << 8);
         total_secs = fs->buf[MFAT_COMMON_BPB_OFFS_TOTSEC16]
                             | (fs->buf[MFAT_COMMON_BPB_OFFS_TOTSEC16 + 1] << 8);
+        printf("bytespersec = %u\n", bytes_per_sec);
         if (!total_secs) {
             total_secs = fs->buf[MFAT_COMMON_BPB_OFFS_TOTSEC32]
                             | (fs->buf[MFAT_COMMON_BPB_OFFS_TOTSEC32 + 1] << 8)
@@ -151,11 +199,8 @@ static enum mfat_result mfat_check_filesystem(struct mfat_fs *fs, uint64_t secto
             fat_sz = fat_sz16;
         }
         /* N.B. root entry count is 0 for FAT32 */
-        if ((bytes_per_sec == MFAT_SECTOR_SZ)
-            && MLIB_ISPOW2(bytes_per_sec)
-            && (reserved_secs > 0)
-            && (num_fats == 1 || num_fats == 2)
-            && (total_secs >= 128)) {
+        if ((bytes_per_sec == MFAT_SECTOR_SZ) && MLIB_ISPOW2(bytes_per_sec) &&
+                (reserved_secs > 0) && (num_fats == 1 || num_fats == 2) && (total_secs >= 128)) {
 
             root_dir_secs = MLIB_ALIGN_UP(root_ent_cnt * 32, bytes_per_sec) / bytes_per_sec;
             system_secs = reserved_secs + (num_fats * fat_sz) + root_dir_secs;
@@ -220,12 +265,43 @@ static enum mfat_result mfat_check_filesystem(struct mfat_fs *fs, uint64_t secto
             return MFAT_DEVICE_RESULT_OK;
         }
     }
+    return MFAT_RESULT_INVALID_VOLUME;
 }
 
-static void mfat_find_volume(struct mfat_fs *fs,
-                    uint8_t partition) {
+static enum mfat_result mfat_find_volume(struct mfat_fs *fs, uint8_t partition) {
     enum mfat_fs_type fs_type;
-    mfat_check_filesystem(fs, 63, &fs_type);
+    uint32_t bootsig, start_lba;
+    unsigned offs;
+
+    if (partition > 3) {
+        return MFAT_RESULT_INVALID_VOLUME;
+    }
+
+    /* Try superfloppy layout first */
+    printf("Try sector 0\n");
+    if(!partition && mfat_check_filesystem(fs, 0) == MFAT_RESULT_OK) {
+        return MFAT_RESULT_OK;
+    }
+
+    /* Try reading MBR */
+    if (mfat_load_buffer(fs, 0) != MFAT_RESULT_OK) {
+        return MFAT_RESULT_DEVICE_ERROR;
+    }
+    bootsig = fs->buf[MFAT_COMMON_BS_OFFS_BOOTSIG] |
+                                                    (fs->buf[MFAT_COMMON_BS_OFFS_BOOTSIG + 1] << 8);
+    printf("mfat_find_volume, bootsig = %04x\n", bootsig);
+    if (bootsig != 0xaa55) {
+        return MFAT_RESULT_INVALID_VOLUME;
+    }
+
+    /* Offset of parittion entry */
+    offs = 446 + (16 * partition);
+    start_lba = fs->buf[offs + 8] |
+                (fs->buf[offs + 9] << 8) |
+                (fs->buf[offs + 10] << 16) |
+                (fs->buf[offs + 11] << 24);
+    printf("mfat_find_volume, start_lba for partition %u = %08x\n", partition, start_lba);
+    return mfat_check_filesystem(fs, start_lba);
 }
 
 static enum mfat_result mfat_do_mount(uint8_t vol, uint8_t mode) {
@@ -239,6 +315,7 @@ static enum mfat_result mfat_do_mount(uint8_t vol, uint8_t mode) {
 
     if (fs->fs_type != MFAT_FS_TYPE_INVALID) {
         /* Already mounted */
+        printf("mfat_do_mount: already mounted");
         return MFAT_RESULT_TODO;
     }
 
@@ -249,11 +326,12 @@ static enum mfat_result mfat_do_mount(uint8_t vol, uint8_t mode) {
     /* Initialise the device */
     dev_status = fs->device->init(fs->device->user);
     if (dev_status != MFAT_DEVICE_STATUS_OK) {
+        printf("mfat_do_mount: init failed");
         return MFAT_RESULT_TODO;
     }
 
     /* Find FAT volume */
-    mfat_find_volume(fs, 0);
+    return mfat_find_volume(fs, 0);
 
 
     return MFAT_RESULT_TODO;
@@ -385,7 +463,7 @@ static enum mfat_result mfat_dir_load(struct mfat_dir *dir, uint32_t cluster) {
     if (fs->root_dir_cluster) {
         dir->obj.sector = mfat_cluster_to_sector(fs, fs->root_dir_cluster);
     }
-    
+
     dir->obj.offs = 0;
 
     return MFAT_RESULT_OK;
@@ -402,13 +480,13 @@ static enum mfat_result mfat_object_seek(struct mfat_object *obj, size_t pos) {
 static enum mfat_result mfat_next_dir_entry(struct mfat_dir *dir) {
     struct mfat_fs *fs = globals.vols[dir->obj.vol_id];
     uint32_t cluster;
-    
+
     dir->obj.offs += MFAT_DIR_ENTRY_SZ;
     printf("OFFS = %u\n", dir->obj.offs);
     /* Fixed size directory? Cluster only 0 for FAT12/FAT16 */
-    if (dir->obj.cluster == 0
-        && ((dir->obj.offs / MFAT_DIR_ENTRY_SZ) >= fs->num_root_dir_entries)) {
+    if (!dir->obj.cluster && ((dir->obj.offs / MFAT_DIR_ENTRY_SZ) >= fs->num_root_dir_entries)) {
             /* Reached max of fixed size root directory */
+            printf("End of fixed size root\n");
             return MFAT_RESULT_TODO;
     } else {
         /* Changed sector */
@@ -420,13 +498,15 @@ static enum mfat_result mfat_next_dir_entry(struct mfat_dir *dir) {
                 cluster = mfat_get_fat(fs, dir->obj.cluster);
                 printf("Next cluster = %08x\n", cluster);
                 if (cluster <= 1) {
+                    printf("Cluster <= 1");
                     return MFAT_RESULT_TODO;
                 }
 				if (cluster == 0xffffffff) {
                     return MFAT_RESULT_DEVICE_ERROR;
                 }
                 if (cluster >= fs->num_fat_entries) {
-                    // OR stretch
+                    // TODO: Stretch (create new)
+                    dir->obj.sector = 0;
                     return MFAT_RESULT_NO_FILE;
                 }
                 dir->obj.cluster = cluster;
@@ -437,16 +517,16 @@ static enum mfat_result mfat_next_dir_entry(struct mfat_dir *dir) {
                 dir->obj.sector = mfat_cluster_to_sector(fs, dir->obj.cluster);
                 dir->obj.offs = 0;
             }
-        } 
+        }
     }
     return MFAT_RESULT_OK;
 }
 
-static uint8_t lfn_name_lut[] = {1, 3, 5, 7, 9, 14, 16, 18, 20, 22, 24, 28, 30};
+static const uint8_t lfn_name_lut[] = {1, 3, 5, 7, 9, 14, 16, 18, 20, 22, 24, 28, 30};
 static uint16_t lfn_buf[256] = {0}; // MOVE this to mfat_fs?
 
 /* Could we make a generic get bytes from fs obj? */
-static enum mfat_result mfat_get_dir_entry(struct mfat_dir *dir, 
+static enum mfat_result mfat_get_dir_entry(struct mfat_dir *dir,
                                 struct mfat_dir_entry *dir_entry) {
     enum mfat_result result;
     uint8_t attr, lfn_prev_ord, lfn_prev_csum, lfn_max_ord, temp, sfn_pos;
@@ -454,6 +534,16 @@ static enum mfat_result mfat_get_dir_entry(struct mfat_dir *dir,
     uint16_t lfn_cur_name[13];
     uint16_t sector_offs, lfn_pos, lfn_chr;
     uint8_t *lfn_ptr, *sfn_ptr;
+
+    if (!dir->obj.sector) {
+        dir_entry->name[0] = '\0';
+        dir_entry->short_name[0] = '\0';
+        dir_entry->size = 0;
+        dir_entry->start_cluster = 0;
+        dir_entry->attr = 0;
+        dir_entry->vol_id = MFAT_MAX_VOLUMES;
+        return MFAT_RESULT_NO_FILE;
+    }
 
     lfn_prev_ord = 0;
     do {
@@ -472,8 +562,8 @@ static enum mfat_result mfat_get_dir_entry(struct mfat_dir *dir,
             printf("End of list\n");
             return MFAT_RESULT_NO_FILE;
         } else if ((attr & MFAT_LDIR_ENTRY_ATTR_LONG_NAME_MASK) == MFAT_LDIR_ENTRY_ATTR_LONG_NAME) {
-            printf("LFN entry\n");
-            if (lfn_prev_ord == 0) {
+            printf("LFN entry, ord = %x\n", temp);
+            if (!lfn_prev_ord) {
                 if (!(temp & MFAT_LDIR_ENTRY_ORD_LAST_LONG_ENTRY)) {
                     return MFAT_RESULT_TODO;
                 }
@@ -492,12 +582,13 @@ static enum mfat_result mfat_get_dir_entry(struct mfat_dir *dir,
             }
             /* Copy to LFN buf */
             for (lfn_pos = 0; lfn_pos < 13; lfn_pos++) {
-                lfn_buf[(((temp & 0x3f) - 1) * 13) + lfn_pos] = fs->buf[sector_offs + lfn_name_lut[lfn_pos]]
-                                                                | (fs->buf[sector_offs + lfn_name_lut[lfn_pos] + 1] << 8);      
+                lfn_buf[(((temp & 0x3f) - 1) * 13) + lfn_pos] =
+                                            fs->buf[sector_offs + lfn_name_lut[lfn_pos]] |
+                                            (fs->buf[sector_offs + lfn_name_lut[lfn_pos] + 1] << 8);
             }
         } else if (attr & MFAT_DIR_ENTRY_ATTR_VOLUME_ID) {
             /* Volume label */
-            printf("Volume label\n");
+            printf("Volume id!\n");
         } else {
             if (lfn_prev_ord) {
                 if (mfat_ldir_checksum_sfn(&fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_NAME]) != lfn_prev_csum) {
@@ -516,24 +607,43 @@ static enum mfat_result mfat_get_dir_entry(struct mfat_dir *dir,
                 }
                 *lfn_ptr = 0x0;
                 sfn_ptr = dir_entry->short_name;
-                printf("SFN = %11s, Long name = %s\n", fs->buf + sector_offs + MFAT_DIR_ENTRY_OFFS_NAME, dir_entry->name);
             } else {
-                /* NO LFN set lfn = sfn */
+                /* TODO: NO LFN set lfn = sfn */
+                dir_entry->name[0] = '\0';
             }
-            /* TODO: Copy SFN in */
-            //for (sfn_pos = 0; sfn_pos < 8; sfn_ptr++) {
-            //                    
-            //}
-            dir_entry->cluster = fs->buf[sector_offs + MFAT_LDIR_ENTRY_OFFS_FSTCLUSLO]
+            /* Convert/render Kanji (0x05 -> 0xe5)? or CP437 to UTF8 conversion */
+            sfn_ptr = dir_entry->short_name;
+            for (sfn_pos = 0; sfn_pos < 8; sfn_pos++) {
+                if (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_NAME + sfn_pos] == ' ') {
+                    break;
+                }
+                *sfn_ptr++ = fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_NAME + sfn_pos];
+            }
+            if (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_NAME + 8] != ' ') {
+                /* Has extension */
+                *sfn_ptr++ = '.';
+                for (sfn_pos = 8; sfn_pos < MFAT_SFN_LEN; sfn_pos++) {
+                    if (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_NAME + sfn_pos] == ' ') {
+                        break;
+                    }
+                    *sfn_ptr++ = fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_NAME + sfn_pos];
+                }
+            }
+            *sfn_ptr = '\0';
+            dir_entry->short_name[MFAT_SFN_LEN + 1] = '\0';
+            dir_entry->start_cluster = fs->buf[sector_offs + MFAT_LDIR_ENTRY_OFFS_FSTCLUSLO]
                                     | (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_FSTCLUSLO + 1] << 8)
                                     | (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_FSTCLUSHI] << 16)
                                     | (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_FSTCLUSHI + 1] << 24);
+            dir_entry->vol_id = dir->obj.vol_id;
+            dir_entry->size = fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_FILESIZE]
+                                    | (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_FILESIZE + 1] << 8)
+                                    | (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_FILESIZE + 2] << 16)
+                                    | (fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_FILESIZE + 3] << 24);
             /* Non-LFN entry and last_lfn != 1? */
-            printf("NAME = %11s\n", &fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_NAME]);
             printf("ATTR = %02x\n", attr);
             printf("NTRES = %02x\n", fs->buf[sector_offs + MFAT_DIR_ENTRY_OFFS_NTRES]);
-            printf("First cluster = %u\n", dir_entry->cluster);
-            
+
             return MFAT_RESULT_OK;
         }
         /* Increment to next dir entry */
@@ -561,6 +671,8 @@ enum mfat_result mfat_get_vol_id(const char *path, uint8_t *result) {
 
 enum mfat_result mfat_follow_path(const char *path) {
     struct mfat_dir dir;
+
+    return MFAT_RESULT_TODO;
 }
 
 /* ----------------------------------- USER INTERACE --------------------------------- */
@@ -573,7 +685,7 @@ enum mfat_result mfat_opendir(struct mfat_dir *dir, const char *path) {
         printf("BAD DRIVE LETTER\n");
         return MFAT_RESULT_TODO;
     }
-    //mfat_follow_path(path);
+    mfat_follow_path(path);
 
     return mfat_dir_load(dir, 0);
 }
@@ -590,18 +702,29 @@ enum mfat_result mfat_readdir(struct mfat_dir *dir, struct mfat_dir_entry *dir_e
         res = mfat_dir_load(dir, 0);
     } else {
         res = mfat_get_dir_entry(dir, dir_entry);
-        if (res != MFAT_RESULT_OK) {
-            return res;
+        /* do something with this result? */
+        if (res == MFAT_RESULT_OK) {
+            res = mfat_next_dir_entry(dir);
+            if (res == MFAT_RESULT_NO_FILE) {
+                /* Okay for now, returned on next call to get_dir_entry */
+                res = MFAT_RESULT_OK;
+            }
         }
-        res = mfat_next_dir_entry(dir);
+        return res;
     }
     return res;
 }
 
 /* User functions - Files */
 
-int mfat_open() {
-    return 0;
+/* Open a directory entry directly (avoids path parsing) */
+enum mfat_result mfat_open_dir_entry(struct mfat_file *fp, struct mfat_dir_entry *dirent,
+                                                                                    uint8_t mode) {
+    return MFAT_RESULT_TODO;
+}
+
+enum mfat_result mfat_open(struct mfat_file *fp, const char *path, uint8_t mode) {
+    return MFAT_RESULT_TODO;
 }
 
 int mfat_close() {
@@ -639,6 +762,7 @@ enum mfat_result mfat_mount(struct mfat_fs *fs,
     /* Is a volume already mounted */
     if (globals.vols[vol]) {
         /* What to do? Unmount? */
+        printf("mfat_mount: already mounted");
         return MFAT_RESULT_TODO;
     }
 

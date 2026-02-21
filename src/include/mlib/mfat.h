@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <mlib/mfat_config.h>
+#include <mlib/mtime.h>
 
 /* Check config is valid */
 
@@ -97,14 +98,23 @@ struct mfat_dir {
 };
 
 #define MFAT_SFN_LEN    11
+/* Technically this should be 3*255? */
 #define MFAT_LFN_LEN    255
 
 /* Directory entry object */
 struct mfat_dir_entry {
-    uint8_t short_name[MFAT_SFN_LEN + 1];
+    /* fname[8] '.' ext[3] + \90 */
+    uint8_t short_name[MFAT_SFN_LEN + 2];
     uint8_t name[MFAT_LFN_LEN + 1];
+    uint8_t vol_id;
     /* Start cluster of the object */
-    uint32_t cluster;
+    uint32_t start_cluster;
+    uint8_t attr;
+    /* Access date */
+    /* Creation date + time */
+    /* Write time + date */
+    /* File size */
+    uint32_t size;
 };
 
 struct mfat_globals {
@@ -166,9 +176,9 @@ enum mfat_mount_flag {
 /* Boot sector offsets common to all FAT types */
 enum mfat_common_bs_offs {
     /* Jump instruction to boot code, two allowed forms:
-     * 1. 0xeb, 0x??, 0x90 
-     * 2. 0xe9, 0x??, 0x?? 
-     * 
+     * 1. 0xeb, 0x??, 0x90
+     * 2. 0xe9, 0x??, 0x??
+     *
      * Forms an unconditional x86 jump to the start of the OS
      * bootstrap. */
     MFAT_COMMON_BS_OFFS_JMPBOOT = 0,
@@ -228,7 +238,7 @@ enum mfat_common_bpb_offs {
      * FAT volume. This field is generally only relevant for IRQ 0x13,
      * This field should always be 0 on non-partitioned media. */
     MFAT_COMMON_BPB_OFFS_HIDDSEC = 28,
-    /* This field is the new 32-bit count of total sectors on the volume. 
+    /* This field is the new 32-bit count of total sectors on the volume.
      * This field can be 0, only if BPB_TotSec16 is non-zero. For FAT32
      * this field must be non-zero, but for FAT12 and FAT16 may be zero if
      * total sector count fits in 16 bit (< 0x10000). */
@@ -392,7 +402,7 @@ enum mfat_ldir_entry_offs {
      * directory entries (each containing components of the
      * long file name) associated with the corresponding
      * short name directory entry.
-     * 
+     *
      * The contents of this field must be masked with 0x40
      * (MFAT_LDIR_LAST_LONG_ENTRY) for the last long directory
      * name entry in the set. Therefore, each sequence of
@@ -426,7 +436,7 @@ enum mfat_ldir_entry_offs {
     MFAT_LDIR_ENTRY_OFFS_NAME3      = 28
 };
 
-#define MFAT_LDIR_ENTRY_SZ      (32)
+#define MFAT_LDIR_ENTRY_SZ                      (32)
 
 #define MFAT_LDIR_ENTRY_ORD_LAST_LONG_ENTRY     (0x40)
 
@@ -437,27 +447,21 @@ enum mfat_ldir_entry_offs {
                                                 | MFAT_DIR_ENTRY_ATTR_SYSTEM | MFAT_DIR_ENTRY_ATTR_VOLUME_ID \
                                                 | MFAT_DIR_ENTRY_ATTR_DIRECTORY | MFAT_DIR_ENTRY_ATTR_ARCHIVE)
 
-#define MFAT_INVALID_SECTOR       (-1ULL)
+#define MFAT_INVALID_SECTOR                     (-1ULL)
 
 /* Mount a device */
 enum mfat_result mfat_mount(struct mfat_fs *fs, struct mfat_device *device, uint8_t vol, uint8_t flags);
 /* Unmount a device */
 enum mfat_result mfat_unmount(uint8_t vol);
-
+/* Directories */
 enum mfat_result mfat_opendir(struct mfat_dir *dir, const char *path);
-
 enum mfat_result mfat_readdir(struct mfat_dir *dir, struct mfat_dir_entry *dirent);
+/* Files */
+enum mfat_result mfat_open_dir_entry(struct mfat_file *fp, struct mfat_dir_entry *dirent,
+                                                                                    uint8_t mode);
+enum mfat_result mfat_open(struct mfat_file *fp, const char *path, uint8_t mode);
 
-/* Restrictions on characters comprising the name:
- * Lower case characters are not allowed
- * Illegal values for characters in the name are as follows:
- * - Values less than 0x20 other than 0x05 for Kanji in first char
- * - 0x22, [0x2a .. 0x2c], [0x2e .. 0x2f], [0x3a .. 0x3f], [0x5b .. 0x5d], 0x7c
- * - Name may not start with 0x20 */
-#define mfat_is_valid_sfn_char(C) !((C < 0x20) || (C == 0x22) || (C >= 0x2a && C <= 0x2f) || (C >= 0x2e && C <= 0x2f))
 
-#define mfat_cluster_to_sector(FS, CLUSTER)     (((FS)->data_start_sector) + (((FS)->cluster_sz) * ((CLUSTER) - 2)))
-
-#define mfat_is_seperator(C)	((C) == '/' || (C) == '\\')
+#define mfat_is_separator(C)	((C) == '/' || (C) == '\\')
 
 #endif
