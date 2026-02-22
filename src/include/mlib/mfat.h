@@ -179,11 +179,9 @@ enum mfat_common_bs_offs {
      * 1. 0xeb, 0x??, 0x90
      * 2. 0xe9, 0x??, 0x??
      *
-     * Forms an unconditional x86 jump to the start of the OS
-     * bootstrap. */
+     * Forms an unconditional x86 jump to the start of the OS bootstrap. */
     MFAT_COMMON_BS_OFFS_JMPBOOT = 0,
-    /* Should typically be "MSWIN4.1", not required but
-     * recommended for compatibility. */
+    /* Should typically be "MSWIN4.1", not required but recommended for compatibility. */
     MFAT_COMMON_BS_OFFS_OEMNAME = 3, // only common to fat12, fat16, fat32
     MFAT_COMMON_BS_OFFS_BOOTSIG = 510
 };
@@ -191,57 +189,50 @@ enum mfat_common_bs_offs {
 /* We don't differentiate between BPB and BS because it seems largely pointless */
 
 enum mfat_common_bpb_offs {
-    /* Count of bytes per sector, can only be: 512, 1024, 2048 or 4096
-     * 512 bytes is recommended for maximum compatibility. */
+    /* Count of bytes per sector, can only be: 512, 1024, 2048 or 4096 512 bytes is recommended for
+     * maximum compatibility. */
     MFAT_COMMON_BPB_OFFS_BYTSPERSEC = 11,
-    /* Number of sectors per allocation unit. This value
-     * must be a power of 2 and greater than 0.
+    /* Number of sectors per allocation unit. This value must be a power of 2 and greater than 0.
      * Legal values are: 1, 2, 4, 8, 16, 32, 64, 128.
-     * Values that define a cluster size greater than 32K
-     * will not work propertly ClusterSz = BPB_BytsPerSec * BPB_SecPerClus. */
+     * Values that define a cluster size greater than 32K will not work propertly
+     * ClusterSz = BPB_BytsPerSec * BPB_SecPerClus. */
     MFAT_COMMON_BPB_OFFS_SECPERCLUS = 13,
-    /* Number of reserved sectors in the reserved region of the volume,
-     * starting at the first sector of the volume. This field must not be 0.
-     * For FAT12 and FAT16 should always be 1, For FAT32, typically 32. */
+    /* Number of reserved sectors in the reserved region of the volume, starting at the first sector
+     * of the volume. This field must not be 0. For FAT12 and FAT16 should always be 1, For FAT32,
+     * typically 32. */
     MFAT_COMMON_BPB_OFFS_RSVDSECCNT = 14,
-    /* Count of FAT data structures on the volume,. This field should always
-     * be 2 for any FAT volume. Any value greater than or equal to 1 is valid.
-     * It is highly recommended to keep this field at 2 for compatibility. */
+    /* Count of FAT data structures on the volume,. This field should always be 2 for any FAT
+     * volume. Any value greater than or equal to 1 is valid. It is highly recommended to keep this
+     * field at 2 for compatibility. */
     MFAT_COMMON_BPB_OFFS_NUMFATS = 16,
-    /* For FAT12 and FAT16 volumes, this field contains the count of 32-byte
-     * directory entries in the root directory. For FAT32 volumes this field
-     * must be 0. For FAT12 and FAT16 volumes the value here should specify
-     * a count that when multiplied by 32 is an even multiple of BPB_BytsPerSec.
-     * For maximimum compatibility, FAT16 volumes should use a value of 512. */
+    /* For FAT12 and FAT16 volumes, this field contains the count of 32-byte directory entries in
+     * the root directory. For FAT32 volumes this field must be 0. For FAT12 and FAT16 volumes the
+     * value here should specify a count that when multiplied by 32 is an even multiple of
+     * BPB_BytsPerSec. For maximimum compatibility, FAT16 volumes should use a value of 512. */
     MFAT_COMMON_BPB_OFFS_ROOTENTCOUNT = 17,
-    /* This field is the old 16-bit total count of sectors on the volume.
-     * This count includes the count of all sectors in the four regions of
-     * the volume. This field can be 0, when 0 then BPB_TotSec32 must be
-     * non-zero. For FAT12 and FAT16, this field is used and BPB_TotSec32 is 0
+    /* This field is the old 16-bit total count of sectors on the volume. This count includes the
+     * count of all sectors in the four regions of the volume. This field can be 0, when 0 then
+     * BPB_TotSec32 must be non-zero. For FAT12 and FAT16, this field is used and BPB_TotSec32 is 0
      * if the total sector count fits in 16 bit (< 0x10000). */
     MFAT_COMMON_BPB_OFFS_TOTSEC16 = 19,
-    /* 0xf8 is the standard value for fixed (non-removable) media. For
-     * removable media 0xf0 is used.
+    /* 0xf8 is the standard value for fixed (non-removable) media. For removable media 0xf0 is used.
      * Legal values are: 0xf0, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff.
      * Whatever value is here must be put in the low byte of the fat[0] entry. */
     MFAT_COMMON_BPB_OFFS_MEDIA = 21,
-    /* This field is the FAT12 and FAT16 16-bit count of sectors occupied by one
-     * FAT. On FAT32 volumes this field must be 0 and BPB_FATSz32 contains the FAT
-     * size count. */
+    /* This field is the FAT12 and FAT16 16-bit count of sectors occupied by one FAT. On FAT32
+     * volumes this field must be 0 and BPB_FATSz32 contains the FAT size count. */
     MFAT_COMMON_BPB_OFFS_FATSZ16 = 22,
-    /* Sectors per track for IRQ 0x13, only relevant for media with
-     * geometry e.g. floppy disks. */
+    /* Sectors per track for IRQ 0x13, only relevant for media with geometry e.g. floppy disks. */
     MFAT_COMMON_BPB_OFFS_SECPERTRK = 24,
     /* Number of heads for IRQ 0x13, as with BPB_SecPerTrk */
     MFAT_COMMON_BPB_OFFS_NUMHEADS = 26,
-    /* Count of hidden sectors before the partition that contains this
-     * FAT volume. This field is generally only relevant for IRQ 0x13,
-     * This field should always be 0 on non-partitioned media. */
+    /* Count of hidden sectors before the partition that contains this FAT volume. This field is
+     * generally only relevant for IRQ 0x13, This field should always be 0 on non-partitioned media.
+     */
     MFAT_COMMON_BPB_OFFS_HIDDSEC = 28,
-    /* This field is the new 32-bit count of total sectors on the volume.
-     * This field can be 0, only if BPB_TotSec16 is non-zero. For FAT32
-     * this field must be non-zero, but for FAT12 and FAT16 may be zero if
-     * total sector count fits in 16 bit (< 0x10000). */
+    /* This field is the new 32-bit count of total sectors on the volume. This field can be 0, only
+     * if BPB_TotSec16 is non-zero. For FAT32 this field must be non-zero, but for FAT12 and FAT16
+     * may be zero if total sector count fits in 16 bit (< 0x10000). */
     MFAT_COMMON_BPB_OFFS_TOTSEC32 = 32
 };
 
@@ -250,26 +241,23 @@ enum mfat_common_bpb_offs {
 enum mfat_fat12_fat16_bs_offs {
     /* The drive number of IRQ 0x13 */
     MFAT_FAT12_FAT16_BS_OFFS_DRVNUM = 36,
-    /* Reserved (but used by WindowsNT),. Code that formats FAT volumes should
-     * set this to 0. */
+    /* Reserved (but used by WindowsNT),. Code that formats FAT volumes should set this to 0. */
     MFAT_FAT12_FAT16_BS_OFFS_RESERVED1 = 37,
-    /* Extended boot signature (0x29). This indicates that the following
-     * three fields are present. */
+    /* Extended boot signature (0x29). This indicates that the following three fields are present.
+    */
     MFAT_FAT12_FAT16_BS_OFFS_BOOTSIG  = 38,
-    /* Volume serial number, this together with BS_VolLab supports tracking
-     * of removable media. These values allow FAT file system drivers to detect
-     * if the wrong disk is inserted. The ID is usually generated by combining
-     * the current date and time into a 32-bit value. */
+    /* Volume serial number, this together with BS_VolLab supports tracking of removable media.
+     * These values allow FAT file system drivers to detect if the wrong disk is inserted. The ID is
+     * usually generated by combining the current date and time into a 32-bit value. */
     MFAT_FAT12_FAT16_BS_OFFS_VOLID = 39,
-    /* Volume label, this field matches the 11-byte volume label recorded in
-     * the root directory.
-     * Note: FAT file system drivers should make sure that they update this field
-     * when the volume label file in the root directory is changed. The default
-     * value for this field should be "NO NAME    ". */
+    /* Volume label, this field matches the 11-byte volume label recorded in the root directory.
+     * Note: FAT file system drivers should make sure that they update this field when the volume
+     * label file in the root directory is changed. The default value for this field should be
+     * "NO NAME    ". */
     MFAT_FAT12_FAT16_BS_OFFS_VOLLAB = 43,
-    /* One of the strings "FAT12   ", "FAT16   ", "FAT     ".
-     * This field should not be used to determine the type of FAT file system.
-     * However, it should be set correctly for compatibility. */
+    /* One of the strings "FAT12   ", "FAT16   ", "FAT     ". This field should not be used to
+     * determine the type of FAT file system. However, it should be set correctly for compatibility.
+     */
     MFAT_FAT12_FAT16_BS_OFFS_FILSYSTYPE = 54
 };
 
@@ -281,8 +269,8 @@ enum mfat_fat32_bs_offs {
     MFAT_FAT32_BS_OFFS_BOOTSIG = 66,
     MFAT_FAT32_BS_OFFS_VOLID = 67,
     MFAT_FAT32_BS_OFFS_VOLLAB = 71,
-    /* This must always be set to the string "FAT32   ". Should not
-     * be relied upon for FAT type determination. */
+    /* This must always be set to the string "FAT32   ". Should not be relied upon for FAT type
+     * determination. */
     MFAT_FAT32_BS_OFFS_FILSYSTYPE = 82
 };
 
@@ -326,9 +314,8 @@ enum mfat_exfat_bs_offs {
 enum mfat_dir_entry_offs {
     /* “Short” file name limited to 11 characters (8.3 format) */
     MFAT_DIR_ENTRY_OFFS_NAME = 0,
-    /* The upper two bits of the attribute byte are reserved
-     * and must always be set to 0 when a file is created.
-     * These bits are not interpreted. */
+    /* The upper two bits of the attribute byte are reserved and must always be set to 0 when a file
+     * is created. These bits are not interpreted. */
     MFAT_DIR_ENTRY_OFFS_ATTR = 11,
     /* Reserved. Must be set to 0. */
     MFAT_DIR_ENTRY_OFFS_NTRES = 12,
@@ -339,100 +326,79 @@ enum mfat_dir_entry_offs {
     MFAT_DIR_ENTRY_OFFS_CRTTIME = 14,
     /* Creation date. */
     MFAT_DIR_ENTRY_OFFS_CRTDATE = 16,
-    /* Last access date. Last access is defined as a read or write
-     * operation performed on the file/directory described  by this entry.
-     * This field must be updated on file modification (write operation)
-     * and the date value must be equal to DIR_WrtDate. */
+    /* Last access date. Last access is defined as a read or write operation performed on the
+     * file/directory described  by this entry. This field must be updated on file modification
+     * (write operation) and the date value must be equal to DIR_WrtDate. */
     MFAT_DIR_ENTRY_OFFS_LSTACCDATE = 18,
-    /* High word of first data cluster number for file/directory
-     * described by this entry. Only valid for volumes formatted FAT32. Must be
-     * set to 0 on volumes formatted FAT12/FAT16. */
+    /* High word of first data cluster number for file/directory described by this entry. Only
+     * valid for volumes formatted FAT32. Must be set to 0 on volumes formatted FAT12/FAT16. */
     MFAT_DIR_ENTRY_OFFS_FSTCLUSHI = 20,
-    /* Last modification (write) time. Value must be equal to DIR_CrtTime
-     * at file creation. */
+    /* Last modification (write) time. Value must be equal to DIR_CrtTime at file creation. */
     MFAT_DIR_ENTRY_OFFS_WRTTIME = 22,
-    /* Last modification (write) date. Value must be equal to DIR_CrtDate
-     * at file creation. */
+    /* Last modification (write) date. Value must be equal to DIR_CrtDate at file creation. */
     MFAT_DIR_ENTRY_OFFS_WRTDATE = 24,
-    /* Low word of first data cluster number for file/directory described
-     * by this entry. */
+    /* Low word of first data cluster number for file/directory described by this entry. */
     MFAT_DIR_ENTRY_OFFS_FSTCLUSLO = 26,
-    /* 32-bit quantity containing size in bytes of file/directory
-     * described by this entry. */
+    /* 32-bit quantity containing size in bytes of file/directory described by this entry. */
     MFAT_DIR_ENTRY_OFFS_FILESIZE = 28
 };
 
 #define MFAT_DIR_ENTRY_SZ    (32)
 
-/* The file cannot be modified – all modification requests
- * must fail with an appropriate error code value. */
+/* The file cannot be modified – all modification requests must fail with an appropriate error code
+ * value. */
 #define MFAT_DIR_ENTRY_ATTR_READ_ONLY           0x01
-/* The corresponding file or sub-directory must not be
- * listed unless a request is issued by the user/application
- * explicitly requesting inclusion of “hidden files”. */
+/* The corresponding file or sub-directory must not be listed unless a request is issued by the
+ * user/application explicitly requesting inclusion of “hidden files”. */
 #define MFAT_DIR_ENTRY_ATTR_HIDDEN              0x02
-/* The corresponding file is tagged as a component of the
- * operating system. It must not be listed unless a request
- * is issued by the user/application explicitly requesting
- * inclusion of “system files”. */
+/* The corresponding file is tagged as a component of the operating system. It must not be listed
+ * unless a request is issued by the user/application explicitly requesting inclusion of “system
+ * files”. */
 #define MFAT_DIR_ENTRY_ATTR_SYSTEM              0x04
-/* The corresponding entry contains the volume label. DIR_FstClusHI
- * and DIR_FstClusLO must always be 0 for the corresponding entry
- * (representing the volume label) since no clusters can be allocated
- * for this entry.
- * Only the root directory can contain one entry with this attribute. No
- * sub-directory must contain an entry of this type. Entries representing
- * long file names are exceptions to these rules. */
+/* The corresponding entry contains the volume label. DIR_FstClusHI and DIR_FstClusLO must always be
+ * 0 for the corresponding entry (representing the volume label) since no clusters can be allocated
+ * for this entry. Only the root directory can contain one entry with this attribute. No
+ * sub-directory must contain an entry of this type. Entries representing long file names are
+ * exceptions to these rules. */
 #define MFAT_DIR_ENTRY_ATTR_VOLUME_ID           0x08
-/* The corresponding entry represents a directory (a child or
- * sub-directory to the containing directory).
- * DIR_FileSize for the corresponding entry must always be 0
- * (even though clusters may have been allocated for the directory). */
+/* The corresponding entry represents a directory (a child or sub-directory to the containing
+ * directory). DIR_FileSize for the corresponding entry must always be 0 (even though clusters may
+ * have been allocated for the directory). */
 #define MFAT_DIR_ENTRY_ATTR_DIRECTORY           0x10
-/* This attribute must be set when the file is created, renamed, or
- * modified. The presence of this attribute indicates that properties of the
- * associated file have been modified. Backup utilities can utilize this
- * information to determine the set of files that need to be backed up to
- * ensure protection in case of media and other failure conditions. */
+/* This attribute must be set when the file is created, renamed, or modified. The presence of this
+ * attribute indicates that properties of the associated file have been modified. Backup utilities
+ * can utilize this information to determine the set of files that need to be backed up to ensure
+ * protection in case of media and other failure conditions. */
 #define MFAT_DIR_ENTRY_ATTR_ARCHIVE             0x20
 
 
 enum mfat_ldir_entry_offs {
-    /* The order of this entry in the sequence of long name
-     * directory entries (each containing components of the
-     * long file name) associated with the corresponding
-     * short name directory entry.
+    /* The order of this entry in the sequence of long name directory entries (each containing
+     * components of the long file name) associated with the corresponding short name directory
+     * entry.
      *
-     * The contents of this field must be masked with 0x40
-     * (MFAT_LDIR_LAST_LONG_ENTRY) for the last long directory
-     * name entry in the set. Therefore, each sequence of
-     * long name directory entries begins with the contents
-     * of this field masked with:
-     * MFAT_LDIR_ENTRY_ORD_LAST_LONG_ENTRY. */
+     * The contents of this field must be masked with 0x40 (MFAT_LDIR_LAST_LONG_ENTRY) for the last
+     * long directory name entry in the set. Therefore, each sequence of long name directory entries
+     * begins with the contents of this field masked with: MFAT_LDIR_ENTRY_ORD_LAST_LONG_ENTRY. */
     MFAT_LDIR_ENTRY_OFFS_ORD        = 0,
-    /* Contains characters 1 through 5 constituting a portion
-     * of the long name. */
+    /* Contains characters 1 through 5 constituting a portion of the long name. */
     MFAT_LDIR_ENTRY_OFFS_NAME1      = 1,
-    /* Attributes – must be set to MFAT_LDIR_ATTR_LONG_NAME
-     * defined as below:
+    /* Attributes – must be set to MFAT_LDIR_ATTR_LONG_NAME defined as below:
      * See: MFAT_LDIR_ENTRY_ATTR_LONG_NAME
-     * NOTE: A mask to determine whether a directory
-     * entry is part of the set of a long name directory
-     * entries is defined below:
+     * NOTE: A mask to determine whether a directory entry is part of the set of a long name
+     * directory entries is defined below:
      * See: MFAT_LDIR_ENTRY_ATTR_LONG_NAME_MASK */
     MFAT_LDIR_ENTRY_OFFS_ATTR       = 11,
     /* Must be set to 0 */
     MFAT_LDIR_ENTRY_OFFS_TYPE       = 12,
-    /* Checksum of name in the associated short name directory
-     * entry at the end of the long name directory entry set. */
+    /* Checksum of name in the associated short name directory entry at the end of the long name
+     * directory entry set. */
     MFAT_LDIR_ENTRY_OFFS_CHKSUM     = 13,
-    /* Contains characters 6 through 11 constituting a portion
-     * of the long name. */
+    /* Contains characters 6 through 11 constituting a portion of the long name. */
     MFAT_LDIR_ENTRY_OFFS_NAME2      = 14,
     /* Must be set to 0. */
     MFAT_LDIR_ENTRY_OFFS_FSTCLUSLO  = 26,
-    /* Contains characters 12 and 13 constituting a portion
-     * of the long name. */
+    /* Contains characters 12 and 13 constituting a portion of the long name. */
     MFAT_LDIR_ENTRY_OFFS_NAME3      = 28
 };
 
