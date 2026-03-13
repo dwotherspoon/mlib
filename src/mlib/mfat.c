@@ -9,7 +9,10 @@ char *mfat_result_lut[] = {
     [MFAT_RESULT_NOT_AVAILABLE]     = "MFAT_RESULT_NOT_AVAILABLE",
     [MFAT_RESULT_DEVICE_INVALID]    = "MFAT_RESULT_DEVICE_INVALID",
     [MFAT_RESULT_DEVICE_ERROR]      = "MFAT_RESULT_DEVICE_ERROR",
+    [MFAT_RESULT_BAD_PATH]          = "MFAT_RESULT_BAD_PATH",
     [MFAT_RESULT_NO_FILE]           = "MFAT_RESULT_NO_FILE",
+    [MFAT_RESULT_INVALID_OBJECT]    = "MFAT_RESULT_INVALID_OBJECT",
+    [MFAT_RESULT_INVALID_MODE]      = "MFAT_RESULT_INVALID_MODE",
 	[MFAT_RESULT_TODO]              = "MFAT_RESULT_TODO"
 };
 
@@ -679,11 +682,12 @@ enum mfat_result mfat_follow_path(const char *path) {
 
 /* User functions - Directories */
 enum mfat_result mfat_opendir(struct mfat_dir *dir, const char *path) {
+    if (!dir) {
+        return MFAT_RESULT_INVALID_OBJECT;
+    }
     /* Load root directory */
-    printf("GET VOL\n");
     if (mfat_get_vol_id(path, &dir->obj.vol_id) != MFAT_RESULT_OK) {
-        printf("BAD DRIVE LETTER\n");
-        return MFAT_RESULT_TODO;
+        return MFAT_RESULT_INVALID_VOLUME;
     }
     mfat_follow_path(path);
 
@@ -695,11 +699,13 @@ int mfat_closedir() {
 }
 
 enum mfat_result mfat_readdir(struct mfat_dir *dir, struct mfat_dir_entry *dir_entry) {
-    /* Validate dir object is real? */
     enum mfat_result res;
+    if (!dir) {
+        return MFAT_RESULT_INVALID_OBJECT;
+    }
     if (!dir_entry) {
         /* Rewind directory object */
-        res = mfat_dir_load(dir, 0);
+        res = mfat_dir_load(dir, dir->obj.start_cluster);
     } else {
         res = mfat_get_dir_entry(dir, dir_entry);
         /* do something with this result? */
@@ -720,10 +726,54 @@ enum mfat_result mfat_readdir(struct mfat_dir *dir, struct mfat_dir_entry *dir_e
 /* Open a directory entry directly (avoids path parsing) */
 enum mfat_result mfat_open_dir_entry(struct mfat_file *fp, struct mfat_dir_entry *dirent,
                                                                                     uint8_t mode) {
+    if (!fp) {
+        return MFAT_RESULT_INVALID_OBJECT;
+    }
     return MFAT_RESULT_TODO;
 }
 
 enum mfat_result mfat_open(struct mfat_file *fp, const char *path, uint8_t mode) {
+    enum mfat_result res;
+    struct mfat_dir dir;
+    /* Validate mode - create and truncate require write */
+    if ((mode & MFAT_MODE_CREATE) && !(mode & MFAT_MODE_WRITE)) {
+        return MFAT_RESULT_INVALID_MODE;
+    }
+    if ((mode & MFAT_MODE_TRUNC) && !(mode & MFAT_MODE_WRITE)) {
+        return MFAT_RESULT_INVALID_MODE;
+    }
+    if (!fp) {
+        return MFAT_RESULT_INVALID_OBJECT;
+    }
+    if (mfat_get_vol_id(path, &fp->obj.vol_id) != MFAT_RESULT_OK) {
+        return MFAT_RESULT_INVALID_VOLUME;
+    }
+    /* Start at root */
+    res = mfat_dir_load(&dir, 0);
+    /* Follow path */
+    res = mfat_follow_path(&dir, path);
+    if (res == MFAT_RESULT_NO_FILE) {
+        if (mode & MFAT_MODE_CREATE) {
+            /* File may be created */
+            return MFAT_RESULT_TODO;
+        } else {
+            /* File does not exist, and we can't create it */
+            return MFAT_RESULT_NO_FILE;
+        }
+    }
+    if (res != MFAT_RESULT_OK) {
+        /* Unrecoverable error e.g. BAD_PATH */
+        return res;
+    }
+    /* TODO: File is read only and write specified? */
+    if(mode & MFAT_MODE_TRUNC) {
+        /* File must be truncated */
+        return MFAT_RESULT_TODO;
+    }
+    /* Open normally */
+    if(mode & MFAT_MODE_APPEND) {
+        /* Seek to end */
+    }
     return MFAT_RESULT_TODO;
 }
 
@@ -739,7 +789,7 @@ int mfat_write() {
     return 0;
 }
 
-int mfat_seek() {
+enum mfat_result mfat_seek(struct mfat_file *fp, long offset, uint8_t origin) {
     return 0;
 }
 

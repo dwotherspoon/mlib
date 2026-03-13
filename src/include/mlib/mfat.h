@@ -155,6 +155,11 @@ enum mfat_result {
     /* Device read or write failed */
     MFAT_RESULT_DEVICE_ERROR,
     MFAT_RESULT_NO_FILE,
+    MFAT_RESULT_BAD_PATH,
+    /* User argument (mfat_file, mfat_dir etc) was NULL */
+    MFAT_RESULT_INVALID_OBJECT,
+    /* Mode fails validation checks for fopen */
+    MFAT_RESULT_INVALID_MODE,
 	MFAT_RESULT_TODO
 };
 
@@ -415,8 +420,28 @@ enum mfat_ldir_entry_offs {
 
 #define MFAT_INVALID_SECTOR                     (-1ULL)
 
+/* libc fopen mapping:
+ * r    = MFAT_MODE_READ
+ * r+   = MFAT_MODE_READ | MFAT_MODE_WRITE
+ * w    = MFAT_MODE_WRITE | MFAT_MODE_CREATE | MFAT_MODE_TRUNC
+ * w+   = MFAT_MODE_READ | MFAT_MODE_WRITE | MFAT_MODE_CREATE | MFAT_MODE_TRUNC
+ * a    = MFAT_MODE_WRITE | MFAT_MODE_CREATE | MFAT_MODE_APPEND
+ * a+   = MFAT_MODE_READ | MFAT_MODE_WRITE | MFAT_MODE_CREATE | MFAT_MODE_APPEND
+*/
+#define	MFAT_MODE_READ              0x01
+#define	MFAT_MODE_WRITE             0x02
+#define MFAT_MODE_CREATE            0x04
+#define MFAT_MODE_APPEND            0x08
+#define MFAT_MODE_TRUNC             0x10
+
+
+#define MFAT_ORIGIN_SET             0x01
+#define MFAT_ORIGIN_CUR             0x02
+#define MFAT_ORIGIN_END             0x03
+
 /* Mount a device */
 enum mfat_result mfat_mount(struct mfat_fs *fs, struct mfat_device *device, uint8_t vol, uint8_t flags);
+
 /* Unmount a device */
 enum mfat_result mfat_unmount(uint8_t vol);
 /* Directories */
@@ -426,7 +451,7 @@ enum mfat_result mfat_readdir(struct mfat_dir *dir, struct mfat_dir_entry *diren
 enum mfat_result mfat_open_dir_entry(struct mfat_file *fp, struct mfat_dir_entry *dirent,
                                                                                     uint8_t mode);
 enum mfat_result mfat_open(struct mfat_file *fp, const char *path, uint8_t mode);
-
+enum mfat_result mfat_seek(struct mfat_file *fp, long offset, uint8_t origin);
 
 #define mfat_is_separator(C)	((C) == '/' || (C) == '\\')
 
